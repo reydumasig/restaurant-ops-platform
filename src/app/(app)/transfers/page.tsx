@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/data-table";
+import { Badge } from "@/components/ui/badge";
 
 type Transfer = {
   id: string;
@@ -14,11 +15,11 @@ type Transfer = {
   createdAt: string;
 };
 
-const STATUS_STYLES: Record<Transfer["status"], string> = {
-  pending: "text-gray-500",
-  in_transit: "text-amber-600",
-  received: "text-green-700",
-  cancelled: "text-red-500",
+const STATUS_VARIANTS: Record<Transfer["status"], "secondary" | "warning" | "success" | "destructive"> = {
+  pending: "secondary",
+  in_transit: "warning",
+  received: "success",
+  cancelled: "destructive",
 };
 
 const STATUS_LABELS: Record<Transfer["status"], string> = {
@@ -42,16 +43,16 @@ export default function TransfersPage() {
   }, []);
 
   const columns: Column<Transfer>[] = [
-    { header: "Transfer #", cell: (r) => <code className="text-xs text-gray-500">{r.transferNo}</code> },
+    { header: "Transfer #", cell: (r) => <code className="text-xs text-muted-foreground">{r.transferNo}</code> },
     { header: "From", cell: (r) => r.fromBranchName ?? "—" },
     { header: "To", cell: (r) => r.toBranchName ?? "—" },
-    { header: "Status", cell: (r) => <span className={STATUS_STYLES[r.status]}>{STATUS_LABELS[r.status]}</span> },
+    { header: "Status", cell: (r) => <Badge variant={STATUS_VARIANTS[r.status]}>{STATUS_LABELS[r.status]}</Badge> },
     { header: "Created By", cell: (r) => r.createdByName ?? "—" },
     { header: "Created", cell: (r) => new Date(r.createdAt).toLocaleString() },
     {
       header: "",
       cell: (r) => (
-        <Link href={`/transfers/${r.id}`} className="text-sm text-blue-600 hover:underline">
+        <Link href={`/transfers/${r.id}`} className="text-sm text-primary hover:underline">
           View
         </Link>
       ),
@@ -60,7 +61,7 @@ export default function TransfersPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">Transfer History</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">Transfer History</h1>
       <DataTable columns={columns} rows={rows} loading={loading} emptyMessage="No transfers yet." />
     </div>
   );

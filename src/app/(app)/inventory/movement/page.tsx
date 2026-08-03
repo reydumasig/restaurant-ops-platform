@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type Item = { id: string; sku: string; name: string };
 
@@ -77,109 +83,105 @@ export default function StockMovementPage() {
 
       <div className="mb-4 flex gap-2">
         {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
-          <button
+          <Button
             key={m}
+            type="button"
+            variant={mode === m ? "default" : "outline"}
             onClick={() => {
               setMode(m);
               setError(null);
               setSuccess(null);
             }}
-            className={`rounded-md px-3 py-1.5 text-sm ${mode === m ? "bg-gray-900 text-white" : "bg-white text-gray-700 border border-gray-300"}`}
           >
             {MODE_LABELS[m]}
-          </button>
+          </Button>
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <div>
-          <label className="text-sm font-medium text-gray-700">Branch</label>
-          {branches.length > 1 ? (
-            <select
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p className="mt-1 text-sm text-gray-600">{branches[0]?.name ?? "—"}</p>
-          )}
-        </div>
+      <Card>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Branch</Label>
+              {branches.length > 1 ? (
+                <Select value={branchId} onValueChange={setBranchId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-gray-600">{branches[0]?.name ?? "—"}</p>
+              )}
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Item Type</label>
-          <select
-            value={itemType}
-            onChange={(e) => {
-              setItemType(e.target.value as "raw_material" | "product");
-              setItemId("");
-            }}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="raw_material">Raw Material</option>
-            <option value="product">Product</option>
-          </select>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Item Type</Label>
+              <Select
+                value={itemType}
+                onValueChange={(value) => {
+                  setItemType(value as "raw_material" | "product");
+                  setItemId("");
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="raw_material">Raw Material</SelectItem>
+                  <SelectItem value="product">Product</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Item</label>
-          <select
-            value={itemId}
-            onChange={(e) => setItemId(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">Select an item…</option>
-            {sortedItems.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name} ({i.sku})
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Item</Label>
+              <Select value={itemId} onValueChange={setItemId} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select an item…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedItems.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.name} ({i.sku})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">
-            {mode === "adjustment" ? "Corrected Quantity (new total on hand)" : "Quantity"}
-          </label>
-          <input
-            type="number"
-            step="0.0001"
-            min="0"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>{mode === "adjustment" ? "Corrected Quantity (new total on hand)" : "Quantity"}</Label>
+              <Input
+                type="number"
+                step="0.0001"
+                min="0"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Notes (optional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-green-700">{success}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            {success && <p className="text-sm text-green-700">{success}</p>}
 
-        <button
-          type="submit"
-          disabled={submitting || !branchId}
-          className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {submitting ? "Saving…" : `Record ${MODE_LABELS[mode]}`}
-        </button>
-      </form>
+            <Button type="submit" disabled={submitting || !branchId} className="w-full">
+              {submitting ? "Saving…" : `Record ${MODE_LABELS[mode]}`}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

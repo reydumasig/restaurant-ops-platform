@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table";
 import { Modal } from "@/components/modal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type Product = {
   id: string;
@@ -90,6 +97,7 @@ export default function ProductsPage() {
     }
 
     setModalOpen(false);
+    toast.success(editing ? "Product updated" : "Product created");
     load();
   }
 
@@ -117,18 +125,23 @@ export default function ProductsPage() {
     },
     {
       header: "Status",
-      cell: (r) => <span className={r.active ? "text-green-700" : "text-gray-400"}>{r.active ? "Active" : "Inactive"}</span>,
+      cell: (r) => <Badge variant={r.active ? "success" : "secondary"}>{r.active ? "Active" : "Inactive"}</Badge>,
     },
     {
       header: "",
       cell: (r) => (
         <div className="flex gap-3">
-          <button onClick={() => openEdit(r)} className="text-sm text-blue-600 hover:underline">
+          <Button variant="link" size="sm" onClick={() => openEdit(r)} className="h-auto p-0">
             Edit
-          </button>
-          <button onClick={() => toggleActive(r)} className="text-sm text-gray-600 hover:underline">
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => toggleActive(r)}
+            className={cn("h-auto p-0", r.active ? "text-destructive" : "text-success")}
+          >
             {r.active ? "Deactivate" : "Activate"}
-          </button>
+          </Button>
         </div>
       ),
     },
@@ -143,86 +156,73 @@ export default function ProductsPage() {
             {rows.length} items. Items marked &quot;Not set&quot; need a real selling price entered here.
           </p>
         </div>
-        <button onClick={openCreate} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
-          Add Product
-        </button>
+        <Button onClick={openCreate}>Add Product</Button>
       </div>
 
-      <input
+      <Input
         placeholder="Search by name or SKU…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm"
+        className="mb-4 w-full max-w-sm"
       />
 
       <DataTable columns={columns} rows={filteredRows} loading={loading} />
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Product" : "Add Product"}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Product" : "Add Product"} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">SKU</label>
-            <input
-              value={form.sku}
-              onChange={(e) => setForm({ ...form, sku: e.target.value })}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+          <div className="space-y-1.5">
+            <Label>SKU</Label>
+            <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} required />
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Name</label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+          <div className="space-y-1.5">
+            <Label>Name</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Category</label>
-              <select
-                value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              >
-                {productCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select value={form.categoryId} onValueChange={(value) => setForm({ ...form, categoryId: value })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Unit</label>
-              <select
-                value={form.unitId}
-                onChange={(e) => setForm({ ...form, unitId: e.target.value })}
-                required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              >
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.abbreviation})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Unit</Label>
+              <Select value={form.unitId} onValueChange={(value) => setForm({ ...form, unitId: value })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name} ({u.abbreviation})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Selling Price (₱)</label>
-            <input
+          <div className="space-y-1.5">
+            <Label>Selling Price (₱)</Label>
+            <Input
               type="number"
               step="0.01"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full">
             Save
-          </button>
+          </Button>
         </form>
       </Modal>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import { ReportTable } from "@/components/report-table";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Row = {
   createdAt: string;
@@ -77,26 +78,28 @@ export default function StockMovementReportPage() {
     <div>
       <div className="mb-4 flex justify-end gap-2 print:hidden">
         {branches.length > 1 && (
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-          >
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
-        <select
-          value={itemType}
-          onChange={(e) => setItemType(e.target.value as "raw_material" | "product")}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-        >
-          <option value="raw_material">Raw Materials</option>
-          <option value="product">Products</option>
-        </select>
+        <Select value={itemType} onValueChange={(value) => setItemType(value as "raw_material" | "product")}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="raw_material">Raw Materials</SelectItem>
+            <SelectItem value="product">Products</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <ReportTable
         title="Stock Movement Report"

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { DataTable, type Column } from "@/components/data-table";
 import { SignOutButton } from "@/components/sign-out-button";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Sale = {
   id: string;
@@ -65,17 +67,18 @@ export default function SalesHistoryPage() {
         </div>
         <div className="flex items-center gap-4">
           {branches.length > 1 && (
-            <select
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           <SignOutButton />
         </div>
@@ -84,35 +87,43 @@ export default function SalesHistoryPage() {
       <main className="p-6">
         {summary && (
           <div className="mb-6 grid grid-cols-3 gap-4">
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <p className="text-sm text-gray-500">Today's Sales</p>
-              <p className="text-2xl font-semibold text-gray-900">₱{Number(summary.totalSales).toFixed(2)}</p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <p className="text-sm text-gray-500">Transactions Today</p>
-              <p className="text-2xl font-semibold text-gray-900">{summary.transactionCount}</p>
-            </div>
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <p className="text-sm text-gray-500">Top Seller Today</p>
-              <p className="text-lg font-semibold text-gray-900">{summary.topProducts[0]?.productName ?? "—"}</p>
-            </div>
+            <Card>
+              <CardContent>
+                <p className="text-sm text-gray-500">Today's Sales</p>
+                <p className="text-2xl font-semibold text-gray-900">₱{Number(summary.totalSales).toFixed(2)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent>
+                <p className="text-sm text-gray-500">Transactions Today</p>
+                <p className="text-2xl font-semibold text-gray-900">{summary.transactionCount}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent>
+                <p className="text-sm text-gray-500">Top Seller Today</p>
+                <p className="text-lg font-semibold text-gray-900">{summary.topProducts[0]?.productName ?? "—"}</p>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {summary && summary.topProducts.length > 0 && (
-          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-gray-700">Top Products Today</h2>
-            <ul className="space-y-1 text-sm">
-              {summary.topProducts.map((p) => (
-                <li key={p.productId} className="flex justify-between text-gray-700">
-                  <span>{p.productName}</span>
-                  <span>
-                    {p.totalQuantity} sold — ₱{Number(p.totalRevenue).toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <Card className="mb-6">
+            <CardContent>
+              <h2 className="mb-3 text-sm font-semibold text-gray-700">Top Products Today</h2>
+              <ul className="space-y-1 text-sm">
+                {summary.topProducts.map((p) => (
+                  <li key={p.productId} className="flex justify-between text-gray-700">
+                    <span>{p.productName}</span>
+                    <span>
+                      {p.totalQuantity} sold — ₱{Number(p.totalRevenue).toFixed(2)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         )}
 
         <h2 className="mb-3 text-lg font-semibold text-gray-900">All Sales</h2>

@@ -1,6 +1,14 @@
 "use client";
 
 import { type ReactNode } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export type Column<T> = {
   header: string;
@@ -20,43 +28,41 @@ export function DataTable<T extends { id: string }>({
   emptyMessage?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-      <table className="min-w-full divide-y divide-gray-200 text-sm">
-        <thead className="bg-gray-50">
-          <tr>
+    <div className="rounded-lg border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
             {columns.map((col) => (
-              <th key={col.header} className="px-4 py-2 text-left font-medium text-gray-500">
-                {col.header}
-              </th>
+              <TableHead key={col.header}>{col.header}</TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {loading ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-6 text-center text-gray-400">
+            <TableRow>
+              <TableCell colSpan={columns.length} className="py-6 text-center text-muted-foreground">
                 Loading…
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ) : rows.length === 0 ? (
-            <tr>
-              <td colSpan={columns.length} className="px-4 py-6 text-center text-gray-400">
+            <TableRow>
+              <TableCell colSpan={columns.length} className="py-6 text-center text-muted-foreground">
                 {emptyMessage}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ) : (
             rows.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
+              <TableRow key={row.id}>
                 {columns.map((col) => (
-                  <td key={col.header} className={col.className ?? "px-4 py-2 text-gray-700"}>
+                  <TableCell key={col.header} className={col.className}>
                     {col.cell(row)}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

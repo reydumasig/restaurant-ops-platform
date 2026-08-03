@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DataTable, type Column } from "@/components/data-table";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type LedgerRow = {
   id: string;
@@ -52,7 +53,7 @@ export default function LedgerPage() {
     {
       header: "Change",
       cell: (r) => (
-        <span className={Number(r.quantityDelta) < 0 ? "text-red-600" : "text-green-700"}>
+        <span className={Number(r.quantityDelta) < 0 ? "text-destructive" : "text-green-700"}>
           {Number(r.quantityDelta) > 0 ? "+" : ""}
           {r.quantityDelta}
         </span>
@@ -69,26 +70,28 @@ export default function LedgerPage() {
         <h1 className="text-xl font-semibold text-gray-900">Stock Ledger</h1>
         <div className="flex gap-2">
           {branches.length > 1 && (
-            <select
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
-          <select
-            value={itemType}
-            onChange={(e) => setItemType(e.target.value as "raw_material" | "product")}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="raw_material">Raw Materials</option>
-            <option value="product">Products</option>
-          </select>
+          <Select value={itemType} onValueChange={(value) => setItemType(value as "raw_material" | "product")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="raw_material">Raw Materials</SelectItem>
+              <SelectItem value="product">Products</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

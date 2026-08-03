@@ -5,6 +5,8 @@ import { branches, roles, users } from "@/db/schema";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Dashboard } from "@/components/dashboard";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -36,34 +38,36 @@ export default async function Home() {
       <main className="p-6">
         {appUser ? (
           <>
-            <div className="mb-6 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
-              <div>
-                <p className="text-sm text-gray-900">
-                  Signed in as <span className="font-medium">{appUser.fullName}</span> ({appUser.roleName}) —{" "}
-                  {appUser.branchName ?? "All branches (HQ)"}
-                </p>
-              </div>
-              <div className="flex gap-4">
-                <Link href="/master-data/branches" className="text-sm text-blue-600 hover:underline">
-                  Master Data
-                </Link>
-                <Link href="/inventory" className="text-sm text-blue-600 hover:underline">
-                  Inventory
-                </Link>
-                <Link href="/transfers" className="text-sm text-blue-600 hover:underline">
-                  Transfers
-                </Link>
-                <Link href="/production" className="text-sm text-blue-600 hover:underline">
-                  Production
-                </Link>
-                <Link href="/pos" className="text-sm text-blue-600 hover:underline">
-                  POS
-                </Link>
-                <Link href="/reports/inventory" className="text-sm text-blue-600 hover:underline">
-                  Reports
-                </Link>
-              </div>
-            </div>
+            <Card className="mb-6">
+              <CardContent className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-900">
+                    Signed in as <span className="font-medium">{appUser.fullName}</span> ({appUser.roleName}) —{" "}
+                    {appUser.branchName ?? "All branches (HQ)"}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/master-data/branches">Master Data</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/inventory">Inventory</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/transfers">Transfers</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/production">Production</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/pos">POS</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/reports/inventory">Reports</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
             <Dashboard />
           </>
         ) : (

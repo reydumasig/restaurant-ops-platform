@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/data-table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Recipe = {
   id: string;
@@ -55,14 +58,19 @@ export default function RecipesPage() {
     { header: "Yield", cell: (r) => `${r.yieldQuantity} ${unitById.get(r.yieldUnitId) ?? ""}` },
     {
       header: "Status",
-      cell: (r) => <span className={r.active ? "text-green-700" : "text-gray-400"}>{r.active ? "Active" : "Inactive"}</span>,
+      cell: (r) => <Badge variant={r.active ? "success" : "secondary"}>{r.active ? "Active" : "Inactive"}</Badge>,
     },
     {
       header: "",
       cell: (r) => (
-        <button onClick={() => toggleActive(r)} className="text-sm text-gray-600 hover:underline">
+        <Button
+          variant="link"
+          size="sm"
+          onClick={() => toggleActive(r)}
+          className={cn("h-auto p-0", r.active ? "text-destructive" : "text-success")}
+        >
           {r.active ? "Deactivate" : "Activate"}
-        </button>
+        </Button>
       ),
     },
   ];
@@ -71,9 +79,9 @@ export default function RecipesPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Recipes / BOM</h1>
-        <Link href="/production/recipes/new" className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
-          New Recipe
-        </Link>
+        <Button asChild>
+          <Link href="/production/recipes/new">New Recipe</Link>
+        </Button>
       </div>
       <DataTable columns={columns} rows={rows} loading={loading} emptyMessage="No recipes yet." />
     </div>

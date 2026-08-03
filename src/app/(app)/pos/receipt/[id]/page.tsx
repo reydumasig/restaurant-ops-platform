@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 type SaleItem = { id: string; quantity: string; unitPrice: string; subtotal: string; meta?: { name: string; sku: string } };
 type Sale = {
@@ -34,12 +35,12 @@ export default function ReceiptPage() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 print:bg-white print:p-0">
       <div className="mx-auto mb-4 flex max-w-xs justify-between print:hidden">
-        <button onClick={() => router.push("/pos")} className="text-sm text-blue-600 hover:underline">
+        <Button variant="link" size="sm" onClick={() => router.push("/pos")} className="h-auto p-0">
           ← New Sale
-        </button>
-        <button onClick={() => window.print()} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white">
+        </Button>
+        <Button size="sm" onClick={() => window.print()}>
           Print Receipt
-        </button>
+        </Button>
       </div>
 
       <div className="mx-auto max-w-xs bg-white p-4 font-mono text-xs text-gray-900 shadow print:shadow-none">

@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type Branch = { id: string; name: string };
 type Item = { id: string; sku: string; name: string };
@@ -82,122 +89,120 @@ export default function NewTransferPage() {
     }
 
     const created = await res.json();
+    toast.success("Transfer dispatched");
     router.push(`/transfers/${created.id}`);
   }
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">New Stock Transfer</h1>
+      <h1 className="mb-4 text-xl font-semibold">New Stock Transfer</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">From Branch</label>
-            <select
-              value={fromBranchId}
-              onChange={(e) => setFromBranchId(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">Select…</option>
-              {fromBranches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">To Branch</label>
-            <select
-              value={toBranchId}
-              onChange={(e) => setToBranchId(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">Select…</option>
-              {allBranches
-                .filter((b) => b.id !== fromBranchId)
-                .map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">Items</label>
-            <button type="button" onClick={addLine} className="text-sm text-blue-600 hover:underline">
-              + Add item
-            </button>
-          </div>
-          <div className="space-y-2">
-            {lines.map((line, i) => {
-              const items = line.itemType === "raw_material" ? rawMaterials : products;
-              const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
-              return (
-                <div key={i} className="flex gap-2">
-                  <select
-                    value={line.itemType}
-                    onChange={(e) => updateLine(i, { itemType: e.target.value as "raw_material" | "product", itemId: "" })}
-                    className="rounded-md border border-gray-300 px-2 py-2 text-sm"
-                  >
-                    <option value="raw_material">Raw Material</option>
-                    <option value="product">Product</option>
-                  </select>
-                  <select
-                    value={line.itemId}
-                    onChange={(e) => updateLine(i, { itemId: e.target.value })}
-                    className="flex-1 rounded-md border border-gray-300 px-2 py-2 text-sm"
-                  >
-                    <option value="">Select item…</option>
-                    {sorted.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name} ({item.sku})
-                      </option>
+      <Card>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>From Branch</Label>
+                <Select value={fromBranchId} onValueChange={setFromBranchId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fromBranches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
                     ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    placeholder="Qty"
-                    value={line.quantity}
-                    onChange={(e) => updateLine(i, { quantity: e.target.value })}
-                    className="w-24 rounded-md border border-gray-300 px-2 py-2 text-sm"
-                  />
-                  <button type="button" onClick={() => removeLine(i)} className="px-2 text-gray-400 hover:text-red-600">
-                    ✕
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>To Branch</Label>
+                <Select value={toBranchId} onValueChange={setToBranchId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allBranches
+                      .filter((b) => b.id !== fromBranchId)
+                      .map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <Label>Items</Label>
+                <Button type="button" variant="link" size="sm" onClick={addLine} className="h-auto p-0">
+                  + Add item
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {lines.map((line, i) => {
+                  const items = line.itemType === "raw_material" ? rawMaterials : products;
+                  const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
+                  return (
+                    <div key={i} className="flex gap-2">
+                      <Select
+                        value={line.itemType}
+                        onValueChange={(value) => updateLine(i, { itemType: value as "raw_material" | "product", itemId: "" })}
+                      >
+                        <SelectTrigger className="w-40 shrink-0">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="raw_material">Raw Material</SelectItem>
+                          <SelectItem value="product">Product</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={line.itemId} onValueChange={(value) => updateLine(i, { itemId: value })}>
+                        <SelectTrigger className="w-0 min-w-0 flex-1">
+                          <SelectValue placeholder="Select item…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sorted.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} ({item.sku})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        placeholder="Qty"
+                        value={line.quantity}
+                        onChange={(e) => updateLine(i, { quantity: e.target.value })}
+                        className="w-24 shrink-0"
+                      />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)} className="shrink-0 text-muted-foreground hover:text-destructive">
+                        ✕
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="space-y-1.5">
+              <Label>Notes (optional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {submitting ? "Creating…" : "Dispatch Transfer"}
-        </button>
-      </form>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting ? "Creating…" : "Dispatch Transfer"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

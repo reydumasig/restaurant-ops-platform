@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { DataTable, type Column } from "@/components/data-table";
+import { Button } from "@/components/ui/button";
 
 type Run = {
   id: string;
@@ -39,9 +40,9 @@ export default function ProductionRunsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Production Runs</h1>
-        <Link href="/production/new" className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
-          New Production Run
-        </Link>
+        <Button asChild>
+          <Link href="/production/new">New Production Run</Link>
+        </Button>
       </div>
       <DataTable columns={columns} rows={rows} loading={loading} emptyMessage="No production runs recorded yet." />
     </div>

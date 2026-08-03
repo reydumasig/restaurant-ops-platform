@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table";
 import { Modal } from "@/components/modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Unit = {
   id: string;
@@ -63,6 +67,7 @@ export default function UnitsPage() {
     }
 
     setModalOpen(false);
+    toast.success(editing ? "Unit updated" : "Unit created");
     load();
   }
 
@@ -72,9 +77,9 @@ export default function UnitsPage() {
     {
       header: "",
       cell: (r) => (
-        <button onClick={() => openEdit(r)} className="text-sm text-blue-600 hover:underline">
+        <Button variant="link" size="sm" onClick={() => openEdit(r)} className="h-auto p-0">
           Edit
-        </button>
+        </Button>
       ),
     },
   ];
@@ -83,37 +88,25 @@ export default function UnitsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Units of Measure</h1>
-        <button onClick={openCreate} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
-          Add Unit
-        </button>
+        <Button onClick={openCreate}>Add Unit</Button>
       </div>
 
       <DataTable columns={columns} rows={rows} loading={loading} />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Unit" : "Add Unit"}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+          <div className="space-y-1.5">
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Abbreviation</label>
-            <input
-              value={abbreviation}
-              onChange={(e) => setAbbreviation(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+          <div className="space-y-1.5">
+            <Label>Abbreviation</Label>
+            <Input value={abbreviation} onChange={(e) => setAbbreviation(e.target.value)} required />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full">
             Save
-          </button>
+          </Button>
         </form>
       </Modal>
     </div>

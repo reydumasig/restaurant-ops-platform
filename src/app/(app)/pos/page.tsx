@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Category = { id: string; name: string; itemType: "raw_material" | "product" };
 type Product = { id: string; sku: string; name: string; categoryId: string; price: string; active: boolean };
@@ -111,17 +115,18 @@ export default function PosPage() {
         </div>
         <div className="flex items-center gap-4">
           {branches.length > 1 && (
-            <select
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           <SignOutButton />
         </div>
@@ -131,30 +136,30 @@ export default function PosPage() {
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex gap-2 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2">
             {categories.map((cat) => (
-              <button
+              <Button
                 key={cat.id}
+                variant={activeCategoryId === cat.id ? "default" : "outline"}
                 onClick={() => setActiveCategoryId(cat.id)}
-                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm ${
-                  activeCategoryId === cat.id ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700"
-                }`}
+                className="shrink-0 whitespace-nowrap"
               >
                 {cat.name}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {productsInCategory.map((product) => (
-                <button
+                <Button
                   key={product.id}
+                  variant="outline"
                   onClick={() => addToCart(product)}
-                  className="rounded-lg border border-gray-200 bg-white p-3 text-left hover:border-gray-400"
+                  className="h-auto flex-col items-start whitespace-normal p-3 text-left"
                 >
-                  <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                  <p className="mt-1 text-sm text-gray-600">
+                  <p className="text-sm font-medium">{product.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {Number(product.price) > 0 ? `₱${Number(product.price).toFixed(2)}` : "No price set"}
                   </p>
-                </button>
+                </Button>
               ))}
               {productsInCategory.length === 0 && <p className="text-sm text-gray-400">No products in this category.</p>}
             </div>
@@ -175,19 +180,21 @@ export default function PosPage() {
                       <p className="text-gray-500">₱{line.price.toFixed(2)} each</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
+                      <Button
+                        variant="outline"
+                        size="icon-xs"
                         onClick={() => updateQuantity(line.productId, line.quantity - 1)}
-                        className="h-6 w-6 rounded border border-gray-300 text-gray-600"
                       >
                         −
-                      </button>
+                      </Button>
                       <span className="w-6 text-center">{line.quantity}</span>
-                      <button
+                      <Button
+                        variant="outline"
+                        size="icon-xs"
                         onClick={() => updateQuantity(line.productId, line.quantity + 1)}
-                        className="h-6 w-6 rounded border border-gray-300 text-gray-600"
                       >
                         +
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -196,16 +203,17 @@ export default function PosPage() {
           </div>
 
           <div className="border-t border-gray-200 p-4">
-            <div className="mb-3">
-              <label className="text-sm font-medium text-gray-700">Discount</label>
-              <select
-                value={discountType}
-                onChange={(e) => setDiscountType(e.target.value as "none" | "senior_pwd")}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-              >
-                <option value="none">None</option>
-                <option value="senior_pwd">Senior Citizen / PWD (20%)</option>
-              </select>
+            <div className="mb-3 space-y-1.5">
+              <Label>Discount</Label>
+              <Select value={discountType} onValueChange={(value) => setDiscountType(value as "none" | "senior_pwd")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="senior_pwd">Senior Citizen / PWD (20%)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1 text-sm">
@@ -225,32 +233,31 @@ export default function PosPage() {
               </div>
             </div>
 
-            <div className="mt-3">
-              <label className="text-sm font-medium text-gray-700">Amount Tendered</label>
-              <input
+            <div className="mt-3 space-y-1.5">
+              <Label>Amount Tendered</Label>
+              <Input
                 type="number"
                 step="0.01"
                 min="0"
                 value={tendered}
                 onChange={(e) => setTendered(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               />
               {tendered && (
-                <p className={`mt-1 text-sm ${change < 0 ? "text-red-600" : "text-gray-600"}`}>
+                <p className={`text-sm ${change < 0 ? "text-destructive" : "text-gray-600"}`}>
                   {change < 0 ? "Insufficient tender" : `Change: ₱${change.toFixed(2)}`}
                 </p>
               )}
             </div>
 
-            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+            {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
-            <button
+            <Button
               onClick={handleCheckout}
               disabled={submitting || !branchId}
-              className="mt-3 w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              className="mt-3 w-full"
             >
               {submitting ? "Processing…" : "Complete Sale"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

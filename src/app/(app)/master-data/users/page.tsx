@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DataTable, type Column } from "@/components/data-table";
 import { Modal } from "@/components/modal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type UserRow = {
   id: string;
@@ -17,6 +24,11 @@ type UserRow = {
 
 type Role = { id: string; name: string };
 type Branch = { id: string; name: string };
+
+// Radix Select forbids an item with value="" — this sentinel represents the
+// "All branches (HQ)" choice in the UI only. `form.branchId` itself still
+// stores "" for HQ, unchanged from the original state shape.
+const HQ_SENTINEL = "__hq__";
 
 export default function UsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
@@ -80,6 +92,7 @@ export default function UsersPage() {
     }
 
     setModalOpen(false);
+    toast.success(editing ? "User updated" : "User created");
     load();
   }
 
@@ -99,18 +112,23 @@ export default function UsersPage() {
     { header: "Branch", cell: (r) => r.branchName ?? "All branches (HQ)" },
     {
       header: "Status",
-      cell: (r) => <span className={r.active ? "text-green-700" : "text-gray-400"}>{r.active ? "Active" : "Inactive"}</span>,
+      cell: (r) => <Badge variant={r.active ? "success" : "secondary"}>{r.active ? "Active" : "Inactive"}</Badge>,
     },
     {
       header: "",
       cell: (r) => (
         <div className="flex gap-3">
-          <button onClick={() => openEdit(r)} className="text-sm text-blue-600 hover:underline">
+          <Button variant="link" size="sm" onClick={() => openEdit(r)} className="h-auto p-0">
             Edit
-          </button>
-          <button onClick={() => toggleActive(r)} className="text-sm text-gray-600 hover:underline">
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => toggleActive(r)}
+            className={cn("h-auto p-0", r.active ? "text-destructive" : "text-success")}
+          >
             {r.active ? "Deactivate" : "Activate"}
-          </button>
+          </Button>
         </div>
       ),
     },
@@ -120,84 +138,79 @@ export default function UsersPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Users</h1>
-        <button onClick={openCreate} className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800">
-          Add User
-        </button>
+        <Button onClick={openCreate}>Add User</Button>
       </div>
 
       <DataTable columns={columns} rows={rows} loading={loading} />
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit User" : "Add User"}>
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit User" : "Add User"} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           {!editing && (
             <>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <input
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   required
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Initial Password</label>
-                <input
+              <div className="space-y-1.5">
+                <Label>Initial Password</Label>
+                <Input
                   type="text"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   required
                   minLength={8}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 />
                 <p className="mt-1 text-xs text-gray-500">Share this with the new user — they can log in immediately.</p>
               </div>
             </>
           )}
-          <div>
-            <label className="text-sm font-medium text-gray-700">Full Name</label>
-            <input
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
+          <div className="space-y-1.5">
+            <Label>Full Name</Label>
+            <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Role</label>
-            <select
-              value={form.roleId}
-              onChange={(e) => setForm({ ...form, roleId: e.target.value })}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={form.roleId} onValueChange={(value) => setForm({ ...form, roleId: value })}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select…" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Branch (leave blank for HQ / all branches)</Label>
+            <Select
+              value={form.branchId || HQ_SENTINEL}
+              onValueChange={(value) => setForm({ ...form, branchId: value === HQ_SENTINEL ? "" : value })}
             >
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={HQ_SENTINEL}>All branches (HQ)</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Branch (leave blank for HQ / all branches)</label>
-            <select
-              value={form.branchId}
-              onChange={(e) => setForm({ ...form, branchId: e.target.value })}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">All branches (HQ)</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button type="submit" className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full">
             Save
-          </button>
+          </Button>
         </form>
       </Modal>
     </div>

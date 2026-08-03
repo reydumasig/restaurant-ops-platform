@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type Recipe = { id: string; name: string; productId: string; yieldQuantity: string; active: boolean };
 type Product = { id: string; name: string };
@@ -55,83 +61,76 @@ export default function NewProductionRunPage() {
     <div className="max-w-lg">
       <h1 className="mb-4 text-xl font-semibold text-gray-900">New Production Run</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <div>
-          <label className="text-sm font-medium text-gray-700">Branch</label>
-          {branches.length > 1 ? (
-            <select
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <p className="mt-1 text-sm text-gray-600">{branches[0]?.name ?? "—"}</p>
-          )}
-        </div>
+      <Card>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Branch</Label>
+              {branches.length > 1 ? (
+                <Select value={branchId} onValueChange={setBranchId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-gray-600">{branches[0]?.name ?? "—"}</p>
+              )}
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Recipe</label>
-          <select
-            value={recipeId}
-            onChange={(e) => setRecipeId(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">Select recipe…</option>
-            {recipes.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} — produces {productById.get(r.productId) ?? "?"}
-              </option>
-            ))}
-          </select>
-          {selectedRecipe && (
-            <p className="mt-1 text-xs text-gray-500">
-              This recipe's batch yields {selectedRecipe.yieldQuantity} unit(s). Ingredient quantities scale automatically to the
-              amount you produce below.
-            </p>
-          )}
-        </div>
+            <div className="space-y-1.5">
+              <Label>Recipe</Label>
+              <Select value={recipeId} onValueChange={setRecipeId} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select recipe…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recipes.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name} — produces {productById.get(r.productId) ?? "?"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedRecipe && (
+                <p className="text-xs text-gray-500">
+                  This recipe's batch yields {selectedRecipe.yieldQuantity} unit(s). Ingredient quantities scale automatically to the
+                  amount you produce below.
+                </p>
+              )}
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Quantity Produced</label>
-          <input
-            type="number"
-            step="0.0001"
-            min="0"
-            value={quantityProduced}
-            onChange={(e) => setQuantityProduced(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Quantity Produced</Label>
+              <Input
+                type="number"
+                step="0.0001"
+                min="0"
+                value={quantityProduced}
+                onChange={(e) => setQuantityProduced(e.target.value)}
+                required
+              />
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Notes (optional)</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+            </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={submitting || !branchId}
-          className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {submitting ? "Saving…" : "Record Production Run"}
-        </button>
-      </form>
+            <Button type="submit" disabled={submitting || !branchId} className="w-full">
+              {submitting ? "Saving…" : "Record Production Run"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

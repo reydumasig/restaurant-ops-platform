@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { type ColumnDef, flexRender, getCoreRowModel, getSortedRowModel, type SortingState, useReactTable } from "@tanstack/react-table";
 import { exportToExcel } from "@/lib/export";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export function ReportTable<T>({
   title,
@@ -33,65 +42,66 @@ export function ReportTable<T>({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between print:hidden">
-        <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => exportToExcel(exportFilename, exportRows(data))}
-            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
           >
             Export Excel
-          </button>
-          <button onClick={() => window.print()} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
             Print / Save PDF
-          </button>
+          </Button>
         </div>
       </div>
-      <h1 className="mb-2 hidden text-lg font-semibold text-gray-900 print:block">{title}</h1>
+      <h1 className="mb-2 hidden text-lg font-semibold text-foreground print:block">{title}</h1>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white print:border-none">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50 print:bg-white">
+      <div className="rounded-lg border bg-card print:border-none">
+        <Table>
+          <TableHeader className="print:bg-white">
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th
+                  <TableHead
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-4 py-2 text-left font-medium text-gray-500 select-none"
+                    className="cursor-pointer select-none"
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                     {{ asc: " ↑", desc: " ↓" }[header.column.getIsSorted() as string] ?? ""}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-6 text-center text-gray-400">
+              <TableRow className="print:hover:bg-white">
+                <TableCell colSpan={columns.length} className="py-6 text-center text-muted-foreground">
                   Loading…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-6 text-center text-gray-400">
+              <TableRow className="print:hover:bg-white">
+                <TableCell colSpan={columns.length} className="py-6 text-center text-muted-foreground">
                   No records.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 print:hover:bg-white">
+                <TableRow key={row.id} className="print:hover:bg-white">
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-2 text-gray-700">
+                    <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

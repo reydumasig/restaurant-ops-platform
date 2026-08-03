@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { DataTable, type Column } from "@/components/data-table";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type StockRow = {
   id: string;
@@ -42,9 +45,11 @@ export default function StockLevelsPage() {
         const reorder = r.meta?.reorderPoint != null ? Number(r.meta.reorderPoint) : null;
         const low = reorder != null && reorder > 0 && qty <= reorder;
         return (
-          <span className={low ? "font-medium text-red-600" : ""}>
-            {qty} {r.meta?.unitAbbreviation}
-            {low && " ⚠ low stock"}
+          <span className="flex items-center gap-2">
+            <span className={low ? "font-medium text-destructive" : ""}>
+              {qty} {r.meta?.unitAbbreviation}
+            </span>
+            {low && <Badge variant="destructive">Low stock</Badge>}
           </span>
         );
       },
@@ -58,35 +63,30 @@ export default function StockLevelsPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Stock Levels</h1>
         {branches.length > 1 ? (
-          <select
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <Select value={branchId} onValueChange={setBranchId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select…" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : (
           <span className="text-sm text-gray-500">{branches[0]?.name ?? ""}</span>
         )}
       </div>
 
       <div className="mb-4 flex gap-2">
-        <button
-          onClick={() => setTab("raw_material")}
-          className={`rounded-md px-3 py-1.5 text-sm ${tab === "raw_material" ? "bg-gray-900 text-white" : "bg-white text-gray-700 border border-gray-300"}`}
-        >
+        <Button variant={tab === "raw_material" ? "default" : "outline"} onClick={() => setTab("raw_material")}>
           Raw Materials
-        </button>
-        <button
-          onClick={() => setTab("product")}
-          className={`rounded-md px-3 py-1.5 text-sm ${tab === "product" ? "bg-gray-900 text-white" : "bg-white text-gray-700 border border-gray-300"}`}
-        >
+        </Button>
+        <Button variant={tab === "product" ? "default" : "outline"} onClick={() => setTab("product")}>
           Products
-        </button>
+        </Button>
       </div>
 
       <DataTable columns={columns} rows={rows} loading={loading || branchesLoading} emptyMessage="No stock recorded yet for this branch." />

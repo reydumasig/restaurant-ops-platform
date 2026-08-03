@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Product = { id: string; sku: string; name: string };
 type RawMaterial = { id: string; sku: string; name: string; unitId: string };
@@ -93,122 +98,119 @@ export default function NewRecipePage() {
     <div className="max-w-2xl">
       <h1 className="mb-4 text-xl font-semibold text-gray-900">New Recipe / BOM</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-        <div>
-          <label className="text-sm font-medium text-gray-700">Recipe Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="e.g. Chicken Inasal Solo"
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+      <Card>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Recipe Name</Label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder="e.g. Chicken Inasal Solo"
+              />
+            </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700">Produces (Product)</label>
-          <select
-            value={productId}
-            onChange={(e) => setProductId(e.target.value)}
-            required
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">Select product…</option>
-            {sortedProducts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.sku})
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Produces (Product)</Label>
+              <Select value={productId} onValueChange={setProductId} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select product…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedProducts.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} ({p.sku})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">Yield Quantity</label>
-            <input
-              type="number"
-              step="0.0001"
-              min="0"
-              value={yieldQuantity}
-              onChange={(e) => setYieldQuantity(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-gray-700">Yield Unit</label>
-            <select
-              value={yieldUnitId}
-              onChange={(e) => setYieldUnitId(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.abbreviation})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500">
-          e.g. yield 1 pc means the ingredient quantities below are for one serving; yield 40 pc means they're for one full batch.
-        </p>
-
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">Ingredients (Raw Materials)</label>
-            <button type="button" onClick={addLine} className="text-sm text-blue-600 hover:underline">
-              + Add ingredient
-            </button>
-          </div>
-          <div className="space-y-2">
-            {lines.map((line, i) => {
-              const rm = rawMaterials.find((r) => r.id === line.rawMaterialId);
-              const unitAbbr = units.find((u) => u.id === line.unitId)?.abbreviation ?? rm?.unitId;
-              return (
-                <div key={i} className="flex gap-2">
-                  <select
-                    value={line.rawMaterialId}
-                    onChange={(e) => updateLine(i, { rawMaterialId: e.target.value })}
-                    className="flex-1 rounded-md border border-gray-300 px-2 py-2 text-sm"
-                  >
-                    <option value="">Select raw material…</option>
-                    {sortedRawMaterials.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.sku})
-                      </option>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Yield Quantity</Label>
+                <Input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={yieldQuantity}
+                  onChange={(e) => setYieldQuantity(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Yield Unit</Label>
+                <Select value={yieldUnitId} onValueChange={setYieldUnitId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.abbreviation})
+                      </SelectItem>
                     ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    placeholder="Qty"
-                    value={line.quantity}
-                    onChange={(e) => updateLine(i, { quantity: e.target.value })}
-                    className="w-24 rounded-md border border-gray-300 px-2 py-2 text-sm"
-                  />
-                  <span className="flex items-center px-1 text-sm text-gray-500">{unitAbbr}</span>
-                  <button type="button" onClick={() => removeLine(i)} className="px-2 text-gray-400 hover:text-red-600">
-                    ✕
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              e.g. yield 1 pc means the ingredient quantities below are for one serving; yield 40 pc means they're for one full batch.
+            </p>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <Label>Ingredients (Raw Materials)</Label>
+                <Button type="button" variant="link" size="sm" onClick={addLine} className="h-auto p-0">
+                  + Add ingredient
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {lines.map((line, i) => {
+                  const rm = rawMaterials.find((r) => r.id === line.rawMaterialId);
+                  const unitAbbr = units.find((u) => u.id === line.unitId)?.abbreviation ?? rm?.unitId;
+                  return (
+                    <div key={i} className="flex gap-2">
+                      <Select value={line.rawMaterialId} onValueChange={(value) => updateLine(i, { rawMaterialId: value })}>
+                        <SelectTrigger className="w-0 min-w-0 flex-1">
+                          <SelectValue placeholder="Select raw material…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sortedRawMaterials.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.name} ({r.sku})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        placeholder="Qty"
+                        value={line.quantity}
+                        onChange={(e) => updateLine(i, { quantity: e.target.value })}
+                        className="w-24 shrink-0"
+                      />
+                      <span className="flex items-center px-1 text-sm text-gray-500">{unitAbbr}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)} className="shrink-0 text-muted-foreground hover:text-destructive">
+                        ✕
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-        >
-          {submitting ? "Saving…" : "Save Recipe"}
-        </button>
-      </form>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting ? "Saving…" : "Save Recipe"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type TransferItem = {
   id: string;
@@ -25,6 +30,20 @@ type TransferDetail = {
   };
   rawMaterialItems: TransferItem[];
   productItems: TransferItem[];
+};
+
+const STATUS_VARIANTS: Record<TransferDetail["transfer"]["status"], "secondary" | "warning" | "success" | "destructive"> = {
+  pending: "secondary",
+  in_transit: "warning",
+  received: "success",
+  cancelled: "destructive",
+};
+
+const STATUS_LABELS: Record<TransferDetail["transfer"]["status"], string> = {
+  pending: "Pending",
+  in_transit: "In Transit",
+  received: "Received",
+  cancelled: "Cancelled",
 };
 
 export default function TransferDetailPage() {
@@ -51,7 +70,7 @@ export default function TransferDetailPage() {
     load();
   }, [params.id]);
 
-  if (!data) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
   const { transfer, rawMaterialItems, productItems } = data;
 
@@ -97,83 +116,79 @@ export default function TransferDetailPage() {
 
   return (
     <div className="max-w-2xl">
-      <button onClick={() => router.push("/transfers")} className="mb-4 text-sm text-blue-600 hover:underline">
+      <Button variant="link" size="sm" className="mb-4 h-auto p-0" onClick={() => router.push("/transfers")}>
         ← Back to history
-      </button>
+      </Button>
 
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">{transfer.transferNo}</h1>
-          <span className="text-sm font-medium text-gray-600">{transfer.status.replace("_", " ")}</span>
-        </div>
-        <p className="mt-2 text-sm text-gray-600">
-          {transfer.fromBranchName} → {transfer.toBranchName}
-        </p>
-        <p className="text-sm text-gray-500">
-          Created by {transfer.createdByName} on {new Date(transfer.createdAt).toLocaleString()}
-        </p>
-        {transfer.receivedByName && (
-          <p className="text-sm text-gray-500">
-            Received by {transfer.receivedByName} on {transfer.receivedAt && new Date(transfer.receivedAt).toLocaleString()}
+      <Card className="mb-4">
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-foreground">{transfer.transferNo}</h1>
+            <Badge variant={STATUS_VARIANTS[transfer.status]}>{STATUS_LABELS[transfer.status]}</Badge>
+          </div>
+          <p className="mt-2 text-sm text-foreground">
+            {transfer.fromBranchName} → {transfer.toBranchName}
           </p>
-        )}
-        {transfer.notes && <p className="mt-2 text-sm text-gray-600">Notes: {transfer.notes}</p>}
-      </div>
+          <p className="text-sm text-muted-foreground">
+            Created by {transfer.createdByName} on {new Date(transfer.createdAt).toLocaleString()}
+          </p>
+          {transfer.receivedByName && (
+            <p className="text-sm text-muted-foreground">
+              Received by {transfer.receivedByName} on {transfer.receivedAt && new Date(transfer.receivedAt).toLocaleString()}
+            </p>
+          )}
+          {transfer.notes && <p className="mt-2 text-sm text-foreground">Notes: {transfer.notes}</p>}
+        </CardContent>
+      </Card>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-gray-500">Item</th>
-              <th className="px-4 py-2 text-left font-medium text-gray-500">Sent</th>
-              <th className="px-4 py-2 text-left font-medium text-gray-500">Received</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {allItems.map((item) => (
-              <tr key={item.id}>
-                <td className="px-4 py-2 text-gray-700">
-                  {item.meta?.name} ({item.kind})
-                </td>
-                <td className="px-4 py-2 text-gray-700">{item.quantitySent}</td>
-                <td className="px-4 py-2">
-                  {transfer.status === "in_transit" ? (
-                    <input
-                      type="number"
-                      step="0.0001"
-                      min="0"
-                      value={receivedQty[item.id] ?? ""}
-                      onChange={(e) => setReceivedQty((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                      className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    item.quantityReceived ?? "—"
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Sent</TableHead>
+                <TableHead>Received</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {allItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    {item.meta?.name} ({item.kind})
+                  </TableCell>
+                  <TableCell>{item.quantitySent}</TableCell>
+                  <TableCell>
+                    {transfer.status === "in_transit" ? (
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        min="0"
+                        value={receivedQty[item.id] ?? ""}
+                        onChange={(e) => setReceivedQty((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                        className="w-24"
+                      />
+                    ) : (
+                      item.quantityReceived ?? "—"
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
       {transfer.status === "in_transit" && (
         <div className="mt-4 flex gap-3">
-          <button
-            onClick={handleReceive}
-            disabled={submitting}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-          >
+          <Button variant="success" onClick={handleReceive} disabled={submitting}>
             Confirm Receipt
-          </button>
-          <button
-            onClick={handleCancel}
-            disabled={submitting}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="destructive" onClick={handleCancel} disabled={submitting}>
             Cancel Transfer
-          </button>
+          </Button>
         </div>
       )}
     </div>
