@@ -43,7 +43,7 @@ export default function ReceiptPage() {
         </Button>
       </div>
 
-      <div className="mx-auto max-w-xs bg-white p-4 font-mono text-xs text-gray-900 shadow print:shadow-none">
+      <div className="mx-auto max-w-xs bg-white p-4 font-mono text-xs text-gray-900 shadow print:mx-0 print:max-w-none print:w-full print:p-1.5 print:text-[10px] print:shadow-none print:leading-tight">
         <div className="text-center">
           <p className="font-bold">{sale.branchName ?? "Casa Inasal"}</p>
           <p>{new Date(sale.importedAt).toLocaleString()}</p>

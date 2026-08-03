@@ -123,6 +123,19 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/*
+ * Receipt printing targets the Xprinter XP-58IID (58mm thermal, 48mm
+ * printable width, 32 chars/line at its standard font). @page can only be
+ * set globally, not via a Tailwind print: utility, hence it living here
+ * rather than in the receipt page component.
+ */
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
