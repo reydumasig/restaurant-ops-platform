@@ -24,6 +24,7 @@ export default function RecipesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -42,13 +43,19 @@ export default function RecipesPage() {
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u.abbreviation])), [units]);
 
   async function toggleActive(row: Recipe) {
-    const res = await fetch(`/api/recipes/${row.id}/active`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !row.active }),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, active: !r.active } : r)));
+    if (togglingId) return;
+    setTogglingId(row.id);
+    try {
+      const res = await fetch(`/api/recipes/${row.id}/active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !row.active }),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, active: !r.active } : r)));
+      }
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -67,9 +74,10 @@ export default function RecipesPage() {
           variant="link"
           size="sm"
           onClick={() => toggleActive(r)}
+          disabled={togglingId === r.id}
           className={cn("h-auto p-0", r.active ? "text-destructive" : "text-success")}
         >
-          {r.active ? "Deactivate" : "Activate"}
+          {togglingId === r.id ? "…" : r.active ? "Deactivate" : "Activate"}
         </Button>
       ),
     },

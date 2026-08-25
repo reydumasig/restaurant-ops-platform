@@ -27,6 +27,8 @@ export default function BranchesPage() {
   const [editing, setEditing] = useState<Branch | null>(null);
   const [form, setForm] = useState({ code: "", name: "", type: "branch" as "commissary" | "branch", address: "" });
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -55,32 +57,44 @@ export default function BranchesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setError(null);
+    setSubmitting(true);
 
-    const res = await fetch(editing ? `/api/branches/${editing.id}` : "/api/branches", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    try {
+      const res = await fetch(editing ? `/api/branches/${editing.id}` : "/api/branches", {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong");
-      return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+
+      setModalOpen(false);
+      toast.success(editing ? "Branch updated" : "Branch created");
+      load();
+    } finally {
+      setSubmitting(false);
     }
-
-    setModalOpen(false);
-    toast.success(editing ? "Branch updated" : "Branch created");
-    load();
   }
 
   async function toggleActive(row: Branch) {
-    await fetch(`/api/branches/${row.id}/active`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !row.active }),
-    });
-    load();
+    if (togglingId) return;
+    setTogglingId(row.id);
+    try {
+      await fetch(`/api/branches/${row.id}/active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !row.active }),
+      });
+      await load();
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   const columns: Column<Branch>[] = [
@@ -98,16 +112,17 @@ export default function BranchesPage() {
       header: "",
       cell: (r) => (
         <div className="flex gap-3">
-          <Button variant="link" size="sm" onClick={() => openEdit(r)} className="h-auto p-0">
+          <Button variant="link" size="sm" onClick={() => openEdit(r)} disabled={togglingId === r.id} className="h-auto p-0">
             Edit
           </Button>
           <Button
             variant="link"
             size="sm"
             onClick={() => toggleActive(r)}
+            disabled={togglingId === r.id}
             className={cn("h-auto p-0", r.active ? "text-destructive" : "text-success")}
           >
-            {r.active ? "Deactivate" : "Activate"}
+            {togglingId === r.id ? "…" : r.active ? "Deactivate" : "Activate"}
           </Button>
         </div>
       ),
@@ -150,8 +165,8 @@ export default function BranchesPage() {
             <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full">
-            Save
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? "Saving…" : "Save"}
           </Button>
         </form>
       </Modal>

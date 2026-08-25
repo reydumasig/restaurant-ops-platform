@@ -52,7 +52,7 @@ export default function TransferDetailPage() {
   const [data, setData] = useState<TransferDetail | null>(null);
   const [receivedQty, setReceivedQty] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [action, setAction] = useState<"receive" | "cancel" | null>(null);
 
   async function load() {
     const res = await fetch(`/api/transfers/${params.id}`);
@@ -75,38 +75,46 @@ export default function TransferDetailPage() {
   const { transfer, rawMaterialItems, productItems } = data;
 
   async function handleReceive() {
+    if (action) return;
     setError(null);
-    setSubmitting(true);
+    setAction("receive");
 
-    const res = await fetch(`/api/transfers/${transfer.id}/receive`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        rawMaterialReceipts: rawMaterialItems.map((i) => ({ id: i.id, quantityReceived: Number(receivedQty[i.id] ?? 0) })),
-        productReceipts: productItems.map((i) => ({ id: i.id, quantityReceived: Number(receivedQty[i.id] ?? 0) })),
-      }),
-    });
+    try {
+      const res = await fetch(`/api/transfers/${transfer.id}/receive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawMaterialReceipts: rawMaterialItems.map((i) => ({ id: i.id, quantityReceived: Number(receivedQty[i.id] ?? 0) })),
+          productReceipts: productItems.map((i) => ({ id: i.id, quantityReceived: Number(receivedQty[i.id] ?? 0) })),
+        }),
+      });
 
-    setSubmitting(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong");
-      return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+      await load();
+    } finally {
+      setAction(null);
     }
-    load();
   }
 
   async function handleCancel() {
+    if (action) return;
     setError(null);
-    setSubmitting(true);
-    const res = await fetch(`/api/transfers/${transfer.id}/cancel`, { method: "POST" });
-    setSubmitting(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong");
-      return;
+    setAction("cancel");
+    try {
+      const res = await fetch(`/api/transfers/${transfer.id}/cancel`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+      await load();
+    } finally {
+      setAction(null);
     }
-    load();
   }
 
   const allItems = [
@@ -185,11 +193,11 @@ export default function TransferDetailPage() {
 
       {transfer.status === "in_transit" && (
         <div className="mt-4 flex gap-3">
-          <Button variant="success" onClick={handleReceive} disabled={submitting}>
-            Confirm Receipt
+          <Button variant="success" onClick={handleReceive} disabled={action !== null}>
+            {action === "receive" ? "Confirming…" : "Confirm Receipt"}
           </Button>
-          <Button variant="destructive" onClick={handleCancel} disabled={submitting}>
-            Cancel Transfer
+          <Button variant="destructive" onClick={handleCancel} disabled={action !== null}>
+            {action === "cancel" ? "Cancelling…" : "Cancel Transfer"}
           </Button>
         </div>
       )}

@@ -23,6 +23,7 @@ export default function CategoriesPage() {
   const [name, setName] = useState("");
   const [itemType, setItemType] = useState<"raw_material" | "product">("raw_material");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -53,23 +54,29 @@ export default function CategoriesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setError(null);
+    setSubmitting(true);
 
-    const res = await fetch(editing ? `/api/categories/${editing.id}` : "/api/categories", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, itemType }),
-    });
+    try {
+      const res = await fetch(editing ? `/api/categories/${editing.id}` : "/api/categories", {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, itemType }),
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong");
-      return;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+
+      setModalOpen(false);
+      toast.success(editing ? "Category updated" : "Category created");
+      load();
+    } finally {
+      setSubmitting(false);
     }
-
-    setModalOpen(false);
-    toast.success(editing ? "Category updated" : "Category created");
-    load();
   }
 
   const columns: Column<Category>[] = [
@@ -113,8 +120,8 @@ export default function CategoriesPage() {
             </Select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full">
-            Save
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? "Saving…" : "Save"}
           </Button>
         </form>
       </Modal>

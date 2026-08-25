@@ -48,6 +48,8 @@ export default function RawMaterialsPage() {
   const [editing, setEditing] = useState<RawMaterial | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
@@ -95,7 +97,9 @@ export default function RawMaterialsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     setError(null);
+    setSubmitting(true);
 
     const body = {
       sku: form.sku,
@@ -108,30 +112,40 @@ export default function RawMaterialsPage() {
       purchaseUnitConversionFactor: form.purchaseUnitConversionFactor ? Number(form.purchaseUnitConversionFactor) : null,
     };
 
-    const res = await fetch(editing ? `/api/raw-materials/${editing.id}` : "/api/raw-materials", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch(editing ? `/api/raw-materials/${editing.id}` : "/api/raw-materials", {
+        method: editing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (!res.ok) {
-      const resBody = await res.json().catch(() => ({}));
-      setError(resBody.error ?? "Something went wrong");
-      return;
+      if (!res.ok) {
+        const resBody = await res.json().catch(() => ({}));
+        setError(resBody.error ?? "Something went wrong");
+        return;
+      }
+
+      setModalOpen(false);
+      toast.success(editing ? "Raw material updated" : "Raw material created");
+      load();
+    } finally {
+      setSubmitting(false);
     }
-
-    setModalOpen(false);
-    toast.success(editing ? "Raw material updated" : "Raw material created");
-    load();
   }
 
   async function toggleActive(row: RawMaterial) {
-    const res = await fetch(`/api/raw-materials/${row.id}/active`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !row.active }),
-    });
-    if (res.ok) load();
+    if (togglingId) return;
+    setTogglingId(row.id);
+    try {
+      const res = await fetch(`/api/raw-materials/${row.id}/active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !row.active }),
+      });
+      if (res.ok) await load();
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   const filteredRows = rows.filter(
@@ -153,16 +167,17 @@ export default function RawMaterialsPage() {
       header: "",
       cell: (r) => (
         <div className="flex gap-3">
-          <Button variant="link" size="sm" onClick={() => openEdit(r)} className="h-auto p-0">
+          <Button variant="link" size="sm" onClick={() => openEdit(r)} disabled={togglingId === r.id} className="h-auto p-0">
             Edit
           </Button>
           <Button
             variant="link"
             size="sm"
             onClick={() => toggleActive(r)}
+            disabled={togglingId === r.id}
             className={cn("h-auto p-0", r.active ? "text-destructive" : "text-success")}
           >
-            {r.active ? "Deactivate" : "Activate"}
+            {togglingId === r.id ? "…" : r.active ? "Deactivate" : "Activate"}
           </Button>
         </div>
       ),
@@ -271,8 +286,8 @@ export default function RawMaterialsPage() {
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full">
-            Save
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? "Saving…" : "Save"}
           </Button>
         </form>
       </Modal>

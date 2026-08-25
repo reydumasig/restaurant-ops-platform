@@ -21,7 +21,7 @@ export default function TimekeepingPage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [punches, setPunches] = useState<Punch[]>([]);
   const [pickingReason, setPickingReason] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function refresh() {
@@ -36,22 +36,27 @@ export default function TimekeepingPage() {
   useEffect(refresh, []);
 
   async function punch(reason?: string) {
+    if (pendingAction) return;
     setError(null);
-    setSubmitting(true);
-    const res = await fetch("/api/timekeeping/punch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ branchId, reason }),
-    });
-    setSubmitting(false);
-    setPickingReason(false);
+    setPendingAction(reason ?? "clock_in");
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong");
-      return;
+    try {
+      const res = await fetch("/api/timekeeping/punch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId, reason }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+      setPickingReason(false);
+      refresh();
+    } finally {
+      setPendingAction(null);
     }
-    refresh();
   }
 
   return (
@@ -87,13 +92,19 @@ export default function TimekeepingPage() {
               </p>
 
               {!status.clockedIn && (
-                <Button size="lg" className="h-16 w-full text-lg" disabled={!branchId || submitting} onClick={() => punch()}>
-                  Clock In
+                <Button size="lg" className="h-16 w-full text-lg" disabled={!branchId || pendingAction !== null} onClick={() => punch()}>
+                  {pendingAction === "clock_in" ? "Clocking In…" : "Clock In"}
                 </Button>
               )}
 
               {status.clockedIn && !pickingReason && (
-                <Button size="lg" variant="destructive" className="h-16 w-full text-lg" disabled={submitting} onClick={() => setPickingReason(true)}>
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="h-16 w-full text-lg"
+                  disabled={pendingAction !== null}
+                  onClick={() => setPickingReason(true)}
+                >
                   Clock Out
                 </Button>
               )}
@@ -102,11 +113,17 @@ export default function TimekeepingPage() {
                 <div className="space-y-2">
                   <p className="text-center text-sm text-muted-foreground">Why are you clocking out?</p>
                   {REASONS.map((r) => (
-                    <Button key={r.value} variant="outline" className="w-full" disabled={submitting} onClick={() => punch(r.value)}>
-                      {r.label}
+                    <Button
+                      key={r.value}
+                      variant="outline"
+                      className="w-full"
+                      disabled={pendingAction !== null}
+                      onClick={() => punch(r.value)}
+                    >
+                      {pendingAction === r.value ? "Clocking Out…" : r.label}
                     </Button>
                   ))}
-                  <Button variant="ghost" className="w-full" disabled={submitting} onClick={() => setPickingReason(false)}>
+                  <Button variant="ghost" className="w-full" disabled={pendingAction !== null} onClick={() => setPickingReason(false)}>
                     Cancel
                   </Button>
                 </div>

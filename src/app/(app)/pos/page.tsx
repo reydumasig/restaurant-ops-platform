@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ type CartLine = { productId: string; name: string; price: number; quantity: numb
 
 export default function PosPage() {
   const router = useRouter();
+  const currentUser = useCurrentUser();
   const { branches, branchId, setBranchId } = useBranchSelector();
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -108,6 +110,11 @@ export default function PosPage() {
     <div className="flex min-h-screen flex-col bg-background md:h-screen">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="flex items-center gap-4">
+          {(currentUser?.roleKey === "owner" || currentUser?.roleKey === "admin") && (
+            <Link href="/" className="whitespace-nowrap text-sm text-primary hover:underline">
+              ← Dashboard
+            </Link>
+          )}
           <h1 className="whitespace-nowrap text-lg font-semibold text-foreground">Point of Sale</h1>
           <Link href="/pos/history" className="whitespace-nowrap text-sm text-primary hover:underline">
             Sales History
