@@ -35,7 +35,7 @@ export default function StockLevelsPage() {
   }, [branchId]);
 
   const columns: Column<StockRow>[] = [
-    { header: "SKU", cell: (r) => <code className="text-xs text-gray-500">{r.meta?.sku}</code> },
+    { header: "SKU", cell: (r) => <code className="text-xs text-muted-foreground">{r.meta?.sku}</code> },
     { header: "Name", cell: (r) => r.meta?.name ?? "—" },
     { header: "Category", cell: (r) => r.meta?.categoryName ?? "—" },
     {
@@ -61,7 +61,7 @@ export default function StockLevelsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Stock Levels</h1>
+        <h1 className="text-xl font-semibold text-foreground">Stock Levels</h1>
         {branches.length > 1 ? (
           <Select value={branchId} onValueChange={setBranchId}>
             <SelectTrigger>
@@ -76,7 +76,7 @@ export default function StockLevelsPage() {
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-sm text-gray-500">{branches[0]?.name ?? ""}</span>
+          <span className="text-sm text-muted-foreground">{branches[0]?.name ?? ""}</span>
         )}
       </div>
 

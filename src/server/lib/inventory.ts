@@ -60,24 +60,30 @@ export async function applyStockMovement(
 
   return executor.transaction(async (tx) => {
     if (itemType === "raw_material") {
+      // Guarantee a row exists, then lock it, so concurrent movements on the
+      // same (branch, item) serialize instead of racing a read-then-write —
+      // two simultaneous sales/production runs could otherwise both read the
+      // same currentQty, both pass the newQty < 0 check, and both commit.
+      await tx
+        .insert(inventoryStockRawMaterials)
+        .values({ branchId, rawMaterialId: itemId, quantity: "0" })
+        .onConflictDoNothing();
+
       const [existing] = await tx
         .select()
         .from(inventoryStockRawMaterials)
         .where(and(eq(inventoryStockRawMaterials.branchId, branchId), eq(inventoryStockRawMaterials.rawMaterialId, itemId)))
-        .limit(1);
+        .limit(1)
+        .for("update");
 
-      const currentQty = existing ? Number(existing.quantity) : 0;
+      const currentQty = Number(existing.quantity);
       const newQty = currentQty + quantityDelta;
       if (newQty < 0) throw new InsufficientStockError();
 
-      if (existing) {
-        await tx
-          .update(inventoryStockRawMaterials)
-          .set({ quantity: String(newQty) })
-          .where(eq(inventoryStockRawMaterials.id, existing.id));
-      } else {
-        await tx.insert(inventoryStockRawMaterials).values({ branchId, rawMaterialId: itemId, quantity: String(newQty) });
-      }
+      await tx
+        .update(inventoryStockRawMaterials)
+        .set({ quantity: String(newQty) })
+        .where(eq(inventoryStockRawMaterials.id, existing.id));
 
       const [ledgerRow] = await tx
         .insert(stockLedgerRawMaterials)
@@ -97,21 +103,23 @@ export async function applyStockMovement(
       return ledgerRow;
     }
 
+    await tx
+      .insert(inventoryStockProducts)
+      .values({ branchId, productId: itemId, quantity: "0" })
+      .onConflictDoNothing();
+
     const [existing] = await tx
       .select()
       .from(inventoryStockProducts)
       .where(and(eq(inventoryStockProducts.branchId, branchId), eq(inventoryStockProducts.productId, itemId)))
-      .limit(1);
+      .limit(1)
+      .for("update");
 
-    const currentQty = existing ? Number(existing.quantity) : 0;
+    const currentQty = Number(existing.quantity);
     const newQty = currentQty + quantityDelta;
     if (newQty < 0) throw new InsufficientStockError();
 
-    if (existing) {
-      await tx.update(inventoryStockProducts).set({ quantity: String(newQty) }).where(eq(inventoryStockProducts.id, existing.id));
-    } else {
-      await tx.insert(inventoryStockProducts).values({ branchId, productId: itemId, quantity: String(newQty) });
-    }
+    await tx.update(inventoryStockProducts).set({ quantity: String(newQty) }).where(eq(inventoryStockProducts.id, existing.id));
 
     const [ledgerRow] = await tx
       .insert(stockLedgerProducts)

@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: "/reports/transfers", label: "Transfers" },
   { href: "/reports/production", label: "Production" },
   { href: "/reports/daily-sales", label: "Daily Sales" },
+  { href: "/reports/attendance", label: "Attendance" },
 ];
 
 export default function ReportsLayout({ children }: { children: ReactNode }) {

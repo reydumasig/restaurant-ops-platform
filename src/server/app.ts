@@ -13,6 +13,7 @@ import { recipesRoute } from "@/server/routes/recipes";
 import { productionRoute } from "@/server/routes/production";
 import { posRoute } from "@/server/routes/pos";
 import { dashboardRoute } from "@/server/routes/dashboard";
+import { timekeepingRoute } from "@/server/routes/timekeeping";
 
 export const app = new Hono().basePath("/api");
 
@@ -41,6 +42,7 @@ authed.route("/recipes", recipesRoute);
 authed.route("/production", productionRoute);
 authed.route("/pos", posRoute);
 authed.route("/dashboard", dashboardRoute);
+authed.route("/timekeeping", timekeepingRoute);
 
 app.route("/", authed);
 

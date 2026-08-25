@@ -117,7 +117,7 @@ export default function BranchesPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Branches</h1>
+        <h1 className="text-xl font-semibold text-foreground">Branches</h1>
         <Button onClick={openCreate}>Add Branch</Button>
       </div>
 

@@ -139,7 +139,7 @@ export default function RawMaterialsPage() {
   );
 
   const columns: Column<RawMaterial>[] = [
-    { header: "SKU", cell: (r) => <code className="text-xs text-gray-500">{r.sku}</code> },
+    { header: "SKU", cell: (r) => <code className="text-xs text-muted-foreground">{r.sku}</code> },
     { header: "Name", cell: (r) => r.name },
     { header: "Category", cell: (r) => categoryById.get(r.categoryId)?.name ?? "—" },
     { header: "Unit", cell: (r) => unitById.get(r.unitId)?.abbreviation ?? "—" },
@@ -173,8 +173,8 @@ export default function RawMaterialsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Raw Materials</h1>
-          <p className="mt-1 text-sm text-gray-500">{rows.length} items — imported from your item list and normalized.</p>
+          <h1 className="text-xl font-semibold text-foreground">Raw Materials</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{rows.length} items — imported from your item list and normalized.</p>
         </div>
         <Button onClick={openCreate}>Add Raw Material</Button>
       </div>

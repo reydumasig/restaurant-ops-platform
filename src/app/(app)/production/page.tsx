@@ -39,7 +39,7 @@ export default function ProductionRunsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Production Runs</h1>
+        <h1 className="text-xl font-semibold text-foreground">Production Runs</h1>
         <Button asChild>
           <Link href="/production/new">New Production Run</Link>
         </Button>

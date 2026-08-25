@@ -137,7 +137,7 @@ export default function UsersPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Users</h1>
+        <h1 className="text-xl font-semibold text-foreground">Users</h1>
         <Button onClick={openCreate}>Add User</Button>
       </div>
 
@@ -165,7 +165,7 @@ export default function UsersPage() {
                   required
                   minLength={8}
                 />
-                <p className="mt-1 text-xs text-gray-500">Share this with the new user — they can log in immediately.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Share this with the new user — they can log in immediately.</p>
               </div>
             </>
           )}

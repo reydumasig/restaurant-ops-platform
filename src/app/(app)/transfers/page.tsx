@@ -46,7 +46,14 @@ export default function TransfersPage() {
     { header: "Transfer #", cell: (r) => <code className="text-xs text-muted-foreground">{r.transferNo}</code> },
     { header: "From", cell: (r) => r.fromBranchName ?? "—" },
     { header: "To", cell: (r) => r.toBranchName ?? "—" },
-    { header: "Status", cell: (r) => <Badge variant={STATUS_VARIANTS[r.status]}>{STATUS_LABELS[r.status]}</Badge> },
+    {
+      header: "Status",
+      cell: (r) => (
+        <Badge variant={STATUS_VARIANTS[r.status]} pulse={r.status === "in_transit"}>
+          {STATUS_LABELS[r.status]}
+        </Badge>
+      ),
+    },
     { header: "Created By", cell: (r) => r.createdByName ?? "—" },
     { header: "Created", cell: (r) => new Date(r.createdAt).toLocaleString() },
     {

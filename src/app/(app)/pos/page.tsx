@@ -105,11 +105,11 @@ export default function PosPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+    <div className="flex min-h-screen flex-col bg-background md:h-screen">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-gray-900">Point of Sale</h1>
-          <Link href="/pos/history" className="text-sm text-blue-600 hover:underline">
+          <h1 className="whitespace-nowrap text-lg font-semibold text-foreground">Point of Sale</h1>
+          <Link href="/pos/history" className="whitespace-nowrap text-sm text-primary hover:underline">
             Sales History
           </Link>
         </div>
@@ -132,9 +132,9 @@ export default function PosPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex gap-2 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2">
+      <div className="flex flex-1 flex-col overflow-visible md:flex-row md:overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-visible md:overflow-hidden">
+          <div className="flex gap-2 overflow-x-auto border-b border-border bg-card px-4 py-2">
             {categories.map((cat) => (
               <Button
                 key={cat.id}
@@ -146,7 +146,7 @@ export default function PosPage() {
               </Button>
             ))}
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 p-4 md:overflow-y-auto">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {productsInCategory.map((product) => (
                 <Button
@@ -161,23 +161,23 @@ export default function PosPage() {
                   </p>
                 </Button>
               ))}
-              {productsInCategory.length === 0 && <p className="text-sm text-gray-400">No products in this category.</p>}
+              {productsInCategory.length === 0 && <p className="text-sm text-muted-foreground">No products in this category.</p>}
             </div>
           </div>
         </div>
 
-        <div className="flex w-96 flex-col border-l border-gray-200 bg-white">
-          <div className="flex-1 overflow-y-auto p-4">
-            <h2 className="mb-3 text-sm font-semibold text-gray-700">Current Order</h2>
+        <div className="flex w-full flex-col border-t border-border bg-card md:w-96 md:border-t-0 md:border-l">
+          <div className="flex-1 p-4 md:overflow-y-auto">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Current Order</h2>
             {cart.length === 0 ? (
-              <p className="text-sm text-gray-400">No items yet — tap a menu item to add it.</p>
+              <p className="text-sm text-muted-foreground">No items yet — tap a menu item to add it.</p>
             ) : (
               <div className="space-y-2">
                 {cart.map((line) => (
                   <div key={line.productId} className="flex items-center justify-between text-sm">
                     <div className="flex-1">
-                      <p className="text-gray-900">{line.name}</p>
-                      <p className="text-gray-500">₱{line.price.toFixed(2)} each</p>
+                      <p className="text-foreground">{line.name}</p>
+                      <p className="text-muted-foreground">₱{line.price.toFixed(2)} each</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -202,7 +202,7 @@ export default function PosPage() {
             )}
           </div>
 
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-border p-4">
             <div className="mb-3 space-y-1.5">
               <Label>Discount</Label>
               <Select value={discountType} onValueChange={(value) => setDiscountType(value as "none" | "senior_pwd")}>
@@ -217,17 +217,17 @@ export default function PosPage() {
             </div>
 
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
                 <span>₱{subtotal.toFixed(2)}</span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Discount</span>
                   <span>−₱{discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-base font-semibold text-gray-900">
+              <div className="flex justify-between text-base font-semibold text-foreground">
                 <span>Total</span>
                 <span>₱{total.toFixed(2)}</span>
               </div>
@@ -243,7 +243,7 @@ export default function PosPage() {
                 onChange={(e) => setTendered(e.target.value)}
               />
               {tendered && (
-                <p className={`text-sm ${change < 0 ? "text-destructive" : "text-gray-600"}`}>
+                <p className={`text-sm ${change < 0 ? "text-destructive" : "text-muted-foreground"}`}>
                   {change < 0 ? "Insufficient tender" : `Change: ₱${change.toFixed(2)}`}
                 </p>
               )}

@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "dotenv -e .env.local -- vitest run",
+    "test:watch": "dotenv -e .env.local -- vitest",
     "seed:owner": "dotenv -e .env.local -- tsx scripts/seed-owner.ts",
     "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
     "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
@@ -43,12 +45,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
     "tsx": "^4.23.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

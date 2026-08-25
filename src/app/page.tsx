@@ -30,9 +30,9 @@ export default async function Home() {
     .limit(1);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-        <h1 className="text-lg font-semibold text-gray-900">Restaurant Ops Platform</h1>
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
+        <h1 className="text-lg font-semibold text-foreground">Restaurant Ops Platform</h1>
         <SignOutButton />
       </header>
       <main className="p-6">
@@ -41,7 +41,7 @@ export default async function Home() {
             <Card className="mb-6">
               <CardContent className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-foreground">
                     Signed in as <span className="font-medium">{appUser.fullName}</span> ({appUser.roleName}) —{" "}
                     {appUser.branchName ?? "All branches (HQ)"}
                   </p>
@@ -63,6 +63,9 @@ export default async function Home() {
                     <Link href="/pos">POS</Link>
                   </Button>
                   <Button asChild variant="link" size="sm">
+                    <Link href="/timekeeping">Time Clock</Link>
+                  </Button>
+                  <Button asChild variant="link" size="sm">
                     <Link href="/reports/inventory">Reports</Link>
                   </Button>
                 </div>
@@ -71,7 +74,7 @@ export default async function Home() {
             <Dashboard />
           </>
         ) : (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+          <div className="rounded-lg border border-warning/30 bg-warning/10 p-6 text-sm text-warning">
             Your Supabase Auth account exists, but no matching row was found in <code>public.users</code>. An
             owner/admin needs to provision your account.
           </div>

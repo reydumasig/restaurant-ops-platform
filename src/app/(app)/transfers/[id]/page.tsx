@@ -124,7 +124,9 @@ export default function TransferDetailPage() {
         <CardContent>
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-foreground">{transfer.transferNo}</h1>
-            <Badge variant={STATUS_VARIANTS[transfer.status]}>{STATUS_LABELS[transfer.status]}</Badge>
+            <Badge variant={STATUS_VARIANTS[transfer.status]} pulse={transfer.status === "in_transit"}>
+              {STATUS_LABELS[transfer.status]}
+            </Badge>
           </div>
           <p className="mt-2 text-sm text-foreground">
             {transfer.fromBranchName} → {transfer.toBranchName}

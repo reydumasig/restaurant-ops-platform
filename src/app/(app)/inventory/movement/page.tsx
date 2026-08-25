@@ -79,7 +79,7 @@ export default function StockMovementPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">Stock In / Out / Adjust</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">Stock In / Out / Adjust</h1>
 
       <div className="mb-4 flex gap-2">
         {(Object.keys(MODE_LABELS) as Mode[]).map((m) => (
@@ -117,7 +117,7 @@ export default function StockMovementPage() {
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-gray-600">{branches[0]?.name ?? "—"}</p>
+                <p className="text-sm text-muted-foreground">{branches[0]?.name ?? "—"}</p>
               )}
             </div>
 
@@ -174,7 +174,7 @@ export default function StockMovementPage() {
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
-            {success && <p className="text-sm text-green-700">{success}</p>}
+            {success && <p className="text-sm text-success">{success}</p>}
 
             <Button type="submit" disabled={submitting || !branchId} className="w-full">
               {submitting ? "Saving…" : `Record ${MODE_LABELS[mode]}`}

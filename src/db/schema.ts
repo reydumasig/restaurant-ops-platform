@@ -173,7 +173,10 @@ export const inventoryStockRawMaterials = pgTable(
     quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull().default("0"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("inventory_stock_rm_branch_item_key").on(table.branchId, table.rawMaterialId)],
+  (table) => [
+    uniqueIndex("inventory_stock_rm_branch_item_key").on(table.branchId, table.rawMaterialId),
+    check("inventory_stock_rm_quantity_nonnegative", sql`${table.quantity} >= 0`),
+  ],
 );
 
 export const inventoryStockProducts = pgTable(
@@ -189,7 +192,10 @@ export const inventoryStockProducts = pgTable(
     quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull().default("0"),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("inventory_stock_p_branch_item_key").on(table.branchId, table.productId)],
+  (table) => [
+    uniqueIndex("inventory_stock_p_branch_item_key").on(table.branchId, table.productId),
+    check("inventory_stock_p_quantity_nonnegative", sql`${table.quantity} >= 0`),
+  ],
 );
 
 export const stockLedgerRawMaterials = pgTable(
@@ -380,6 +386,41 @@ export const posSaleItems = pgTable(
   (table) => [
     index("pos_sale_items_sale_id_idx").on(table.posSaleId),
     index("pos_sale_items_product_id_idx").on(table.productId),
+  ],
+);
+
+// ============================================================
+// Time Keeping — minimal staff clock in/out (see migration
+// 20260825140000_phase1_timekeeping.sql for the scope rationale).
+// ============================================================
+
+export const timePunches = pgTable(
+  "time_punches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    type: text("type").notNull(),
+    reason: text("reason"),
+    // clock_timestamp(), not defaultNow() — see the migration for why.
+    punchedAt: timestamp("punched_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("time_punches_user_id_idx").on(table.userId, table.punchedAt),
+    index("time_punches_branch_id_idx").on(table.branchId, table.punchedAt),
+    check("time_punches_type_check", sql`${table.type} in ('in', 'out')`),
+    check("time_punches_reason_check", sql`${table.reason} in ('short_break', 'lunch', 'end_of_shift')`),
+    check(
+      "time_punches_reason_matches_type_check",
+      sql`(${table.type} = 'out' and ${table.reason} is not null) or (${table.type} = 'in' and ${table.reason} is null)`,
+    ),
   ],
 );
 

@@ -115,13 +115,13 @@ export default function ProductsPage() {
   );
 
   const columns: Column<Product>[] = [
-    { header: "SKU", cell: (r) => <code className="text-xs text-gray-500">{r.sku}</code> },
+    { header: "SKU", cell: (r) => <code className="text-xs text-muted-foreground">{r.sku}</code> },
     { header: "Name", cell: (r) => r.name },
     { header: "Category", cell: (r) => categoryById.get(r.categoryId)?.name ?? "—" },
     { header: "Unit", cell: (r) => unitById.get(r.unitId)?.abbreviation ?? "—" },
     {
       header: "Price",
-      cell: (r) => (Number(r.price) > 0 ? `₱${Number(r.price).toFixed(2)}` : <span className="text-amber-600">Not set</span>),
+      cell: (r) => (Number(r.price) > 0 ? `₱${Number(r.price).toFixed(2)}` : <span className="text-warning">Not set</span>),
     },
     {
       header: "Status",
@@ -151,8 +151,8 @@ export default function ProductsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Products</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-xl font-semibold text-foreground">Products</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {rows.length} items. Items marked &quot;Not set&quot; need a real selling price entered here.
           </p>
         </div>

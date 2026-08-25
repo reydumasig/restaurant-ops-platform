@@ -88,7 +88,7 @@ export default function CategoriesPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Categories</h1>
+        <h1 className="text-xl font-semibold text-foreground">Categories</h1>
         <Button onClick={openCreate}>Add Category</Button>
       </div>
 

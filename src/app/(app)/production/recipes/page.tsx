@@ -78,7 +78,7 @@ export default function RecipesPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Recipes / BOM</h1>
+        <h1 className="text-xl font-semibold text-foreground">Recipes / BOM</h1>
         <Button asChild>
           <Link href="/production/recipes/new">New Recipe</Link>
         </Button>

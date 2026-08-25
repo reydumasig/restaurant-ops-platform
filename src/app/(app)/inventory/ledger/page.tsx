@@ -53,7 +53,7 @@ export default function LedgerPage() {
     {
       header: "Change",
       cell: (r) => (
-        <span className={Number(r.quantityDelta) < 0 ? "text-destructive" : "text-green-700"}>
+        <span className={Number(r.quantityDelta) < 0 ? "text-destructive" : "text-success"}>
           {Number(r.quantityDelta) > 0 ? "+" : ""}
           {r.quantityDelta}
         </span>
@@ -67,7 +67,7 @@ export default function LedgerPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Stock Ledger</h1>
+        <h1 className="text-xl font-semibold text-foreground">Stock Ledger</h1>
         <div className="flex gap-2">
           {branches.length > 1 && (
             <Select value={branchId} onValueChange={setBranchId}>
@@ -95,7 +95,7 @@ export default function LedgerPage() {
         </div>
       </div>
 
-      <p className="mb-4 text-sm text-gray-500">
+      <p className="mb-4 text-sm text-muted-foreground">
         Append-only audit trail — every stock-affecting action is recorded here and cannot be edited or deleted.
       </p>
 

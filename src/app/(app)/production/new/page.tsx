@@ -59,7 +59,7 @@ export default function NewProductionRunPage() {
 
   return (
     <div className="max-w-lg">
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">New Production Run</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">New Production Run</h1>
 
       <Card>
         <CardContent>
@@ -80,7 +80,7 @@ export default function NewProductionRunPage() {
                   </SelectContent>
                 </Select>
               ) : (
-                <p className="text-sm text-gray-600">{branches[0]?.name ?? "—"}</p>
+                <p className="text-sm text-muted-foreground">{branches[0]?.name ?? "—"}</p>
               )}
             </div>
 
@@ -99,7 +99,7 @@ export default function NewProductionRunPage() {
                 </SelectContent>
               </Select>
               {selectedRecipe && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   This recipe's batch yields {selectedRecipe.yieldQuantity} unit(s). Ingredient quantities scale automatically to the
                   amount you produce below.
                 </p>

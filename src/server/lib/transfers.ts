@@ -95,16 +95,20 @@ export async function confirmReceipt(params: {
     if (transfer.status !== "in_transit") throw new Error(`Transfer is already ${transfer.status}`);
 
     for (const receipt of rawMaterialReceipts) {
-      await tx
-        .update(stockTransferItemsRawMaterials)
-        .set({ quantityReceived: String(receipt.quantityReceived) })
-        .where(eq(stockTransferItemsRawMaterials.id, receipt.id));
-
       const [line] = await tx
         .select()
         .from(stockTransferItemsRawMaterials)
         .where(eq(stockTransferItemsRawMaterials.id, receipt.id))
         .limit(1);
+      if (!line) throw new Error("Transfer line not found");
+      if (receipt.quantityReceived > Number(line.quantitySent)) {
+        throw new Error("Received quantity cannot exceed the quantity sent");
+      }
+
+      await tx
+        .update(stockTransferItemsRawMaterials)
+        .set({ quantityReceived: String(receipt.quantityReceived) })
+        .where(eq(stockTransferItemsRawMaterials.id, receipt.id));
 
       await applyStockMovement(
         {
@@ -122,12 +126,16 @@ export async function confirmReceipt(params: {
     }
 
     for (const receipt of productReceipts) {
+      const [line] = await tx.select().from(stockTransferItemsProducts).where(eq(stockTransferItemsProducts.id, receipt.id)).limit(1);
+      if (!line) throw new Error("Transfer line not found");
+      if (receipt.quantityReceived > Number(line.quantitySent)) {
+        throw new Error("Received quantity cannot exceed the quantity sent");
+      }
+
       await tx
         .update(stockTransferItemsProducts)
         .set({ quantityReceived: String(receipt.quantityReceived) })
         .where(eq(stockTransferItemsProducts.id, receipt.id));
-
-      const [line] = await tx.select().from(stockTransferItemsProducts).where(eq(stockTransferItemsProducts.id, receipt.id)).limit(1);
 
       await applyStockMovement(
         {

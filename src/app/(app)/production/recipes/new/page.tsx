@@ -96,7 +96,7 @@ export default function NewRecipePage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-4 text-xl font-semibold text-gray-900">New Recipe / BOM</h1>
+      <h1 className="mb-4 text-xl font-semibold text-foreground">New Recipe / BOM</h1>
 
       <Card>
         <CardContent>
@@ -155,7 +155,7 @@ export default function NewRecipePage() {
                 </Select>
               </div>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               e.g. yield 1 pc means the ingredient quantities below are for one serving; yield 40 pc means they're for one full batch.
             </p>
 
@@ -193,7 +193,7 @@ export default function NewRecipePage() {
                         onChange={(e) => updateLine(i, { quantity: e.target.value })}
                         className="w-24 shrink-0"
                       />
-                      <span className="flex items-center px-1 text-sm text-gray-500">{unitAbbr}</span>
+                      <span className="flex items-center px-1 text-sm text-muted-foreground">{unitAbbr}</span>
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)} className="shrink-0 text-muted-foreground hover:text-destructive">
                         ✕
                       </Button>

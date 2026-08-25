@@ -35,9 +35,11 @@ function Badge({
   className,
   variant = "default",
   asChild = false,
+  pulse = false,
+  children,
   ...props
 }: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+  VariantProps<typeof badgeVariants> & { asChild?: boolean; pulse?: boolean }) {
   const Comp = asChild ? Slot.Root : "span"
 
   return (
@@ -46,7 +48,10 @@ function Badge({
       data-variant={variant}
       className={cn(badgeVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {pulse && !asChild && <span className="size-1.5 shrink-0 animate-pulse-dot rounded-full bg-current" aria-hidden="true" />}
+      {children}
+    </Comp>
   )
 }
 

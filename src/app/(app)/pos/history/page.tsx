@@ -49,7 +49,7 @@ export default function SalesHistoryPage() {
     {
       header: "",
       cell: (r) => (
-        <Link href={`/pos/receipt/${r.id}`} className="text-sm text-blue-600 hover:underline">
+        <Link href={`/pos/receipt/${r.id}`} className="text-sm text-primary hover:underline">
           View Receipt
         </Link>
       ),
@@ -57,13 +57,13 @@ export default function SalesHistoryPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
         <div className="flex items-center gap-6">
-          <Link href="/pos" className="text-lg font-semibold text-gray-900">
+          <Link href="/pos" className="text-lg font-semibold text-foreground">
             ← Point of Sale
           </Link>
-          <span className="text-sm text-gray-400">Sales History</span>
+          <span className="text-sm text-muted-foreground">Sales History</span>
         </div>
         <div className="flex items-center gap-4">
           {branches.length > 1 && (
@@ -89,20 +89,20 @@ export default function SalesHistoryPage() {
           <div className="mb-6 grid grid-cols-3 gap-4">
             <Card>
               <CardContent>
-                <p className="text-sm text-gray-500">Today's Sales</p>
-                <p className="text-2xl font-semibold text-gray-900">₱{Number(summary.totalSales).toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground">Today's Sales</p>
+                <p className="text-2xl font-semibold text-foreground">₱{Number(summary.totalSales).toFixed(2)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent>
-                <p className="text-sm text-gray-500">Transactions Today</p>
-                <p className="text-2xl font-semibold text-gray-900">{summary.transactionCount}</p>
+                <p className="text-sm text-muted-foreground">Transactions Today</p>
+                <p className="text-2xl font-semibold text-foreground">{summary.transactionCount}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent>
-                <p className="text-sm text-gray-500">Top Seller Today</p>
-                <p className="text-lg font-semibold text-gray-900">{summary.topProducts[0]?.productName ?? "—"}</p>
+                <p className="text-sm text-muted-foreground">Top Seller Today</p>
+                <p className="text-lg font-semibold text-foreground">{summary.topProducts[0]?.productName ?? "—"}</p>
               </CardContent>
             </Card>
           </div>
@@ -111,10 +111,10 @@ export default function SalesHistoryPage() {
         {summary && summary.topProducts.length > 0 && (
           <Card className="mb-6">
             <CardContent>
-              <h2 className="mb-3 text-sm font-semibold text-gray-700">Top Products Today</h2>
+              <h2 className="mb-3 text-sm font-semibold text-foreground">Top Products Today</h2>
               <ul className="space-y-1 text-sm">
                 {summary.topProducts.map((p) => (
-                  <li key={p.productId} className="flex justify-between text-gray-700">
+                  <li key={p.productId} className="flex justify-between text-foreground">
                     <span>{p.productName}</span>
                     <span>
                       {p.totalQuantity} sold — ₱{Number(p.totalRevenue).toFixed(2)}
@@ -126,7 +126,7 @@ export default function SalesHistoryPage() {
           </Card>
         )}
 
-        <h2 className="mb-3 text-lg font-semibold text-gray-900">All Sales</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">All Sales</h2>
         <DataTable columns={columns} rows={sales} loading={loading} emptyMessage="No sales recorded yet." />
       </main>
     </div>

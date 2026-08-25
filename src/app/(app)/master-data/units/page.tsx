@@ -87,7 +87,7 @@ export default function UnitsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Units of Measure</h1>
+        <h1 className="text-xl font-semibold text-foreground">Units of Measure</h1>
         <Button onClick={openCreate}>Add Unit</Button>
       </div>
 

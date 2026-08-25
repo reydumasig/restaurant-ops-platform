@@ -25,15 +25,15 @@ export default function RolesPage() {
 
   const columns: Column<Role>[] = [
     { header: "Name", cell: (r) => r.name },
-    { header: "Key", cell: (r) => <code className="text-xs text-gray-500">{r.key}</code> },
+    { header: "Key", cell: (r) => <code className="text-xs text-muted-foreground">{r.key}</code> },
     { header: "Description", cell: (r) => r.description ?? "—" },
   ];
 
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-semibold text-gray-900">Roles</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-xl font-semibold text-foreground">Roles</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Roles are fixed for Phase 1 — each one has hardcoded permissions in the platform. Assign them to users
           from the Users screen.
         </p>

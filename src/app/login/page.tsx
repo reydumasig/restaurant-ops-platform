@@ -35,13 +35,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Restaurant Ops Platform</h1>
-              <p className="text-sm text-gray-500">Sign in to continue</p>
+              <h1 className="text-xl font-semibold text-foreground">Restaurant Ops Platform</h1>
+              <p className="text-sm text-muted-foreground">Sign in to continue</p>
             </div>
 
             <div className="space-y-1.5">
