@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { purchaseOrderItems, purchaseOrders, rawMaterials, supplierPriceHistory } from "@/db/schema";
+import { purchaseOrderItems, purchaseOrders, rawMaterials, supplierPriceHistory, suppliers } from "@/db/schema";
 import { applyStockMovement } from "@/server/lib/inventory";
 
 function generatePoNumber() {
@@ -164,6 +164,59 @@ export async function getPriceHistory(params: { rawMaterialId: string; limit?: n
     .where(eq(supplierPriceHistory.rawMaterialId, rawMaterialId))
     .orderBy(desc(supplierPriceHistory.recordedAt))
     .limit(limit);
+}
+
+/**
+ * One row per supplier, aggregated from every received purchase order:
+ * how much was ordered vs actually received (fulfillment rate) and the
+ * total value received at actual cost. Computed fresh from purchase_order_
+ * items rather than persisted, since it's a derived view, not a fact the
+ * system records at a point in time.
+ */
+export async function getSupplierPerformance() {
+  const rows = await db
+    .select({
+      supplierId: purchaseOrders.supplierId,
+      supplierName: suppliers.name,
+      poId: purchaseOrders.id,
+      quantityOrdered: purchaseOrderItems.quantityOrdered,
+      quantityReceived: purchaseOrderItems.quantityReceived,
+      actualUnitCost: purchaseOrderItems.actualUnitCost,
+    })
+    .from(purchaseOrderItems)
+    .innerJoin(purchaseOrders, eq(purchaseOrderItems.purchaseOrderId, purchaseOrders.id))
+    .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+    .where(eq(purchaseOrders.status, "received"));
+
+  const bySupplier = new Map<
+    string,
+    { supplierName: string; orders: Set<string>; quantityOrdered: number; quantityReceived: number; valueReceived: number }
+  >();
+
+  for (const row of rows) {
+    const entry = bySupplier.get(row.supplierId) ?? {
+      supplierName: row.supplierName,
+      orders: new Set<string>(),
+      quantityOrdered: 0,
+      quantityReceived: 0,
+      valueReceived: 0,
+    };
+    entry.orders.add(row.poId);
+    entry.quantityOrdered += Number(row.quantityOrdered);
+    entry.quantityReceived += Number(row.quantityReceived ?? 0);
+    entry.valueReceived += Number(row.quantityReceived ?? 0) * Number(row.actualUnitCost ?? 0);
+    bySupplier.set(row.supplierId, entry);
+  }
+
+  return Array.from(bySupplier.entries()).map(([supplierId, e]) => ({
+    supplierId,
+    supplierName: e.supplierName,
+    totalOrders: e.orders.size,
+    totalQuantityOrdered: e.quantityOrdered,
+    totalQuantityReceived: e.quantityReceived,
+    fulfillmentRate: e.quantityOrdered > 0 ? (e.quantityReceived / e.quantityOrdered) * 100 : null,
+    totalValueReceived: e.valueReceived,
+  }));
 }
 
 export async function getSupplierPriceHistory(params: { supplierId: string; limit?: number }) {

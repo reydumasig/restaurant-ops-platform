@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { inventoryStockRawMaterials, stockCountItems, stockLedgerRawMaterials } from "@/db/schema";
 import { getBatchesForItem } from "@/server/lib/batches";
 import { applyStockMovement, InsufficientStockError } from "@/server/lib/inventory";
-import { cancelStockCount, completeStockCount, createStockCount, getStockCountWithItems } from "@/server/lib/stock-count";
+import { cancelStockCount, completeStockCount, createStockCount, getStockCountWithItems, getVarianceReport } from "@/server/lib/stock-count";
 import { createTestBranch, createTestRawMaterial, createTestUser } from "../helpers/fixtures";
 
 describe("stock counts", () => {
@@ -162,5 +162,26 @@ describe("stock counts", () => {
     await completeStockCount({ stockCountId: count.id, completedBy: performedBy, counts: [{ id: riceItem.id, countedQuantity: 20 }] });
 
     expect(await rawMaterialStockOf(branch.id, rice.id)).toBe(20); // not double-deducted
+  });
+
+  it("getVarianceReport includes completed count lines (even exact matches) but not in-progress or cancelled counts", async () => {
+    const branch = await createTestBranch();
+    const rice = await createTestRawMaterial();
+    await applyStockMovement({ branchId: branch.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 100, performedBy });
+
+    const completed = await createStockCount({ branchId: branch.id, itemType: "raw_material", startedBy: performedBy });
+    const completedDetail = await getStockCountWithItems(completed.id);
+    await completeStockCount({ stockCountId: completed.id, completedBy: performedBy, counts: [{ id: completedDetail!.items[0].id, countedQuantity: 90 }] });
+
+    const inProgress = await createStockCount({ branchId: branch.id, itemType: "raw_material", startedBy: performedBy });
+
+    const report = await getVarianceReport({ branchId: branch.id });
+    const countIds = report.map((r) => r.countId);
+    expect(countIds).toContain(completed.id);
+    expect(countIds).not.toContain(inProgress.id);
+
+    const completedRow = report.find((r) => r.countId === completed.id)!;
+    expect(Number(completedRow.expectedQuantity)).toBe(100);
+    expect(Number(completedRow.countedQuantity)).toBe(90);
   });
 });

@@ -7,7 +7,14 @@ import { branches, products, rawMaterials, users } from "@/db/schema";
 import { requireRole } from "@/server/middleware/auth";
 import { canAccessBranch, isHqScoped, type AuthUser } from "@/server/lib/rbac";
 import { InsufficientStockError } from "@/server/lib/inventory";
-import { cancelStockCount, completeStockCount, createStockCount, getStockCountWithItems, listStockCounts } from "@/server/lib/stock-count";
+import {
+  cancelStockCount,
+  completeStockCount,
+  createStockCount,
+  getStockCountWithItems,
+  getVarianceReport,
+  listStockCounts,
+} from "@/server/lib/stock-count";
 import type { AuthVariables } from "@/server/middleware/auth";
 
 export const stockCountsRoute = new Hono<{ Variables: AuthVariables }>();
@@ -34,6 +41,29 @@ stockCountsRoute.get("/", async (c) => {
       branchName: branchById.get(r.branchId),
       startedByName: userById.get(r.startedBy),
       completedByName: r.completedBy ? userById.get(r.completedBy) : null,
+    })),
+  );
+});
+
+stockCountsRoute.get("/variance-report", async (c) => {
+  const authUser = c.get("authUser");
+  const branchId = resolveBranchId(authUser, c.req.query("branchId"));
+  if (branchId && !canAccessBranch(authUser, branchId)) return c.json({ error: "Forbidden" }, 403);
+
+  const rows = await getVarianceReport({ branchId });
+
+  const branchRows = await db.select({ id: branches.id, name: branches.name }).from(branches);
+  const branchById = new Map(branchRows.map((b) => [b.id, b.name]));
+  const rmRows = await db.select({ id: rawMaterials.id, name: rawMaterials.name, sku: rawMaterials.sku }).from(rawMaterials);
+  const rmById = new Map(rmRows.map((r) => [r.id, r]));
+  const productRows = await db.select({ id: products.id, name: products.name, sku: products.sku }).from(products);
+  const productById = new Map(productRows.map((p) => [p.id, p]));
+
+  return c.json(
+    rows.map((r) => ({
+      ...r,
+      branchName: branchById.get(r.branchId),
+      meta: r.rawMaterialId ? rmById.get(r.rawMaterialId) : productById.get(r.productId!),
     })),
   );
 });

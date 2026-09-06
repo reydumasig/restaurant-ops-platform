@@ -1,6 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
-import { consumeFefo, getBatchAllocationsForLedger, getBatchesForItem, getExpiringBatches, InsufficientBatchStockError } from "@/server/lib/batches";
+import {
+  consumeFefo,
+  getAgingBatches,
+  getBatchAllocationsForLedger,
+  getBatchesForItem,
+  getExpiringBatches,
+  InsufficientBatchStockError,
+} from "@/server/lib/batches";
 import { applyStockMovement } from "@/server/lib/inventory";
 import { createTestBranch, createTestRawMaterial, createTestUser } from "../helpers/fixtures";
 
@@ -206,5 +213,20 @@ describe("batch and expiration (FIFO/FEFO) tracking", () => {
     expect(expiryDates).toContain("2026-09-08");
     expect(expiryDates).toContain("2027-01-01");
     expect(expiryDates[0]! <= expiryDates[expiryDates.length - 1]!).toBe(true); // sorted ascending
+  });
+
+  it("getAgingBatches excludes fully-drained batches and only returns stock still on hand", async () => {
+    const branch = await createTestBranch();
+    const rice = await createTestRawMaterial();
+
+    await applyStockMovement({ branchId: branch.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 20, performedBy });
+    await applyStockMovement({ branchId: branch.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 30, performedBy });
+    // Fully drain the first (FEFO/FIFO) batch.
+    await applyStockMovement({ branchId: branch.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_out", quantityDelta: -20, performedBy, referenceType: "manual_stock_out" });
+
+    const aging = await getAgingBatches({ branchId: branch.id });
+    const forRice = aging.filter((b) => b.rawMaterialId === rice.id);
+    expect(forRice).toHaveLength(1); // the drained batch is gone from the aging view
+    expect(Number(forRice[0].quantityRemaining)).toBe(30);
   });
 });

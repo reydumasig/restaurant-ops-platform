@@ -6,7 +6,7 @@ import { db } from "@/db/client";
 import { suppliers } from "@/db/schema";
 import { requireRole } from "@/server/middleware/auth";
 import { recordAudit } from "@/server/lib/audit";
-import { getSupplierPriceHistory } from "@/server/lib/purchasing";
+import { getSupplierPerformance, getSupplierPriceHistory } from "@/server/lib/purchasing";
 import type { AuthVariables } from "@/server/middleware/auth";
 
 export const suppliersRoute = new Hono<{ Variables: AuthVariables }>();
@@ -21,6 +21,11 @@ const supplierInput = z.object({
 
 suppliersRoute.get("/", async (c) => {
   const rows = await db.select().from(suppliers).orderBy(suppliers.name);
+  return c.json(rows);
+});
+
+suppliersRoute.get("/performance-report", async (c) => {
+  const rows = await getSupplierPerformance();
   return c.json(rows);
 });
 

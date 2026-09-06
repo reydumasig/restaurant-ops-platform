@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { inventoryStockRawMaterials, purchaseOrderItems, rawMaterials, suppliers } from "@/db/schema";
 import { getBatchesForItem } from "@/server/lib/batches";
-import { cancelPurchaseOrder, createPurchaseOrder, getPriceHistory, receivePurchaseOrder } from "@/server/lib/purchasing";
+import { cancelPurchaseOrder, createPurchaseOrder, getPriceHistory, getSupplierPerformance, receivePurchaseOrder } from "@/server/lib/purchasing";
 import { createTestBranch, createTestRawMaterial, createTestUser, uniqueSuffix } from "../helpers/fixtures";
 
 async function createTestSupplier() {
@@ -189,5 +189,37 @@ describe("purchase orders", () => {
 
     // Confirms it wasn't double-applied to stock.
     expect(await rawMaterialStockOf(branch.id, rice.id)).toBe(100);
+  });
+
+  it("aggregates fulfillment rate and value received per supplier, across received POs only", async () => {
+    const branch = await createTestBranch("commissary");
+    const supplier = await createTestSupplier();
+    const rice = await createTestRawMaterial();
+
+    const receivedPo = await createPurchaseOrder({
+      supplierId: supplier.id,
+      branchId: branch.id,
+      createdBy: performedBy,
+      items: [{ rawMaterialId: rice.id, quantity: 1000, unitCost: 0.05 }],
+    });
+    const [receivedLine] = await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, receivedPo.id));
+    // Supplier only delivered 900 of the 1000 ordered, at a cost of 0.06.
+    await receivePurchaseOrder({ purchaseOrderId: receivedPo.id, receivedBy: performedBy, receipts: [{ id: receivedLine.id, quantityReceived: 900, actualUnitCost: 0.06 }] });
+
+    // A still-ordered (not yet received) PO from the same supplier must not count toward performance.
+    await createPurchaseOrder({
+      supplierId: supplier.id,
+      branchId: branch.id,
+      createdBy: performedBy,
+      items: [{ rawMaterialId: rice.id, quantity: 500, unitCost: 0.05 }],
+    });
+
+    const performance = await getSupplierPerformance();
+    const row = performance.find((p) => p.supplierId === supplier.id)!;
+    expect(row.totalOrders).toBe(1); // the still-ordered PO is excluded
+    expect(row.totalQuantityOrdered).toBe(1000);
+    expect(row.totalQuantityReceived).toBe(900);
+    expect(row.fulfillmentRate).toBeCloseTo(90);
+    expect(row.totalValueReceived).toBeCloseTo(900 * 0.06);
   });
 });

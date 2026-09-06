@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { inventoryStockProducts, inventoryStockRawMaterials, stockCountItems, stockCounts } from "@/db/schema";
 import { applyStockMovement, type ItemType } from "@/server/lib/inventory";
@@ -114,6 +114,40 @@ export async function completeStockCount(params: { stockCountId: string; complet
 
     return updated;
   });
+}
+
+/**
+ * Every counted line item from a completed count, across every count — the
+ * stock count variance report. Includes exact matches (variance 0) so the
+ * report can be sorted by variance to surface the biggest discrepancies,
+ * rather than only showing rows that already had one flagged.
+ */
+export async function getVarianceReport(params: { branchId?: string | null }) {
+  const { branchId } = params;
+
+  return db
+    .select({
+      countId: stockCounts.id,
+      countNumber: stockCounts.countNumber,
+      branchId: stockCounts.branchId,
+      itemType: stockCounts.itemType,
+      completedAt: stockCounts.completedAt,
+      itemId: stockCountItems.id,
+      rawMaterialId: stockCountItems.rawMaterialId,
+      productId: stockCountItems.productId,
+      expectedQuantity: stockCountItems.expectedQuantity,
+      countedQuantity: stockCountItems.countedQuantity,
+    })
+    .from(stockCountItems)
+    .innerJoin(stockCounts, eq(stockCountItems.stockCountId, stockCounts.id))
+    .where(
+      and(
+        eq(stockCounts.status, "completed"),
+        branchId ? eq(stockCounts.branchId, branchId) : undefined,
+        isNotNull(stockCountItems.countedQuantity),
+      ),
+    )
+    .orderBy(desc(stockCounts.completedAt));
 }
 
 export async function cancelStockCount(params: { stockCountId: string }) {

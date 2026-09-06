@@ -158,3 +158,19 @@ export async function getExpiringBatches(params: { branchId?: string | null; wit
     )
     .orderBy(asc(rawMaterialBatches.expiryDate));
 }
+
+/**
+ * Every batch with stock still on hand, oldest received first — the raw
+ * material inventory aging report. Age buckets are computed by the caller
+ * (received_date to today); this just returns the batches sorted so the
+ * oldest, most at-risk-of-going-stale stock surfaces first.
+ */
+export async function getAgingBatches(params: { branchId?: string | null }) {
+  const { branchId } = params;
+
+  return db
+    .select()
+    .from(rawMaterialBatches)
+    .where(and(branchId ? eq(rawMaterialBatches.branchId, branchId) : undefined, gt(rawMaterialBatches.quantityRemaining, "0")))
+    .orderBy(asc(rawMaterialBatches.receivedDate), asc(rawMaterialBatches.createdAt));
+}
