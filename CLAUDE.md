@@ -14,10 +14,10 @@ Per the proposal's payment terms: each phase requires 50% payment on SOW signing
 
 | Phase | Scope | Investment | Status |
 |---|---|---|---|
-| **Ops Phase 1** | Core Operations & POS Integration | ₱350,000 | ✅ **PAID — ACTIVE. Build this.** |
-| Ops Phase 2 | Procurement & Warehouse Operations | ₱350,000 | 🔒 Locked — no SOW/payment |
-| Ops Phase 3 | Business Intelligence & Analytics | ₱350,000 | 🔒 Locked — no SOW/payment |
-| Ops Phase 4 | Automation & Enterprise Expansion | ₱350,000 | 🔒 Locked — no SOW/payment |
+| **Ops Phase 1** | Core Operations & POS Integration | ₱350,000 | ⚠️ **ACTIVE — balance still outstanding** (₱105,000 collected against a stated 50% down of ₱175,000; UAT sign-off not yet confirmed) |
+| **Ops Phase 2** | Procurement & Warehouse Operations | ₱350,000 | ⚠️ **BUILDING — ahead of SOW signature/payment.** SOW addendum drafted 2026-09-06 (`Ops Phase 2-3 SOW Addendum.docx`), not yet signed by the client, no payment on file. Rey explicitly authorized engineering to proceed ahead of collection on 2026-09-06 and is personally handling the collection/signature side. This is a deliberate, human-made exception to the gate above — not a change to the rule itself. Future sessions: don't infer this same exception applies to any other request; if asked to build something new outside current scope, still stop and ask. |
+| **Ops Phase 3** | Business Intelligence & Analytics | ₱350,000 | ⚠️ **BUILDING — same authorization as Phase 2 above** (client asked for both together, minus Operating Expenses; see the SOW addendum) |
+| Ops Phase 4 | Automation & Enterprise Expansion | ₱350,000 | 🔒 Locked — no SOW/payment, no authorization given |
 | CASA Phase 1–5 | Separate contract (accounting/finance) | ₱2,150,000 | 🔒 Locked — separate contract. **Client policy: will not start until all four Ops Platform phases are complete** (stricter than the proposal's own minimum precondition of Ops Phase 1 live 30+ days with production data — see note below) |
 
 **Update this table only when you (the human) confirm a new phase's SOW is signed and its initial payment is on file.** Do not update it based on inference, verbal mentions, or "we're probably going to sign soon."
@@ -67,9 +67,11 @@ Per the proposal's payment terms: each phase requires 50% payment on SOW signing
 
 ---
 
-## Explicitly Out of Scope (do not build until unlocked in the table above)
+## Ops Phase 2 & 3 — In Scope (building, per the human-authorized exception noted in the table above)
 
-### Ops Phase 2 — Procurement & Warehouse Operations (locked)
+These are being built ahead of a signed SOW/payment — see the Phase Gate Protocol table for the exact authorization and its limits. Don't treat this as precedent for building anything else not listed here.
+
+### Ops Phase 2 — Procurement & Warehouse Operations
 * Supplier management and supplier price history
 * Purchase requests and purchase orders
 * Goods receiving, with receiving discrepancy handling
@@ -78,12 +80,14 @@ Per the proposal's payment terms: each phase requires 50% payment on SOW signing
 * Batch and expiration (FIFO/FEFO) tracking
 * Enhanced inventory reporting (aging, variance, supplier performance)
 
-### Ops Phase 3 — Business Intelligence & Analytics (locked)
+### Ops Phase 3 — Business Intelligence & Analytics
 * Food cost analysis per menu item
 * Branch performance dashboard and cross-branch comparison
 * Profitability reporting by product and by branch
 * Sales and inventory analytics beyond Phase 1's basic dashboard/reports
 * Scheduled and emailed reports for management
+
+## Explicitly Out of Scope (do not build until unlocked in the table above)
 
 ### Ops Phase 4 — Automation & Enterprise Expansion (locked)
 * Automatic production planning based on historical sales / AI demand forecasting

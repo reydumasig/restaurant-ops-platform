@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { href: "/master-data/units", label: "Units of Measure" },
   { href: "/master-data/raw-materials", label: "Raw Materials" },
   { href: "/master-data/products", label: "Products" },
+  { href: "/master-data/suppliers", label: "Suppliers" },
   { href: "/master-data/users", label: "Users" },
   { href: "/master-data/roles", label: "Roles" },
 ];

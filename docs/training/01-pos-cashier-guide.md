@@ -6,6 +6,8 @@ For: Branch Staff, Branch Managers, and anyone taking customer orders.
 
 Go to **POS** in the top navigation. If your account is tied to one branch, that branch is already selected. If you have access to more than one branch (Owners/Admins only), pick the correct branch from the dropdown at the top before taking any order — every sale is recorded against whichever branch is selected.
 
+Owners and Admins also see a **← Dashboard** link at the top of this screen, to jump straight back to the Executive Dashboard — it won't appear for Branch Staff/Managers, since POS is usually where they stay for their whole shift.
+
 ## 2. Taking an order
 
 1. Tap a **category tab** near the top (Specialty, Best Sellers, Sizzlers, Beverages, etc.) — this matches the printed menu.

@@ -91,7 +91,7 @@ export const rawMaterials = pgTable(
     unitId: uuid("unit_id")
       .notNull()
       .references(() => unitsOfMeasure.id),
-    costPerUnit: numeric("cost_per_unit", { precision: 12, scale: 2 }).notNull().default("0"),
+    costPerUnit: numeric("cost_per_unit", { precision: 12, scale: 4 }).notNull().default("0"),
     reorderPoint: numeric("reorder_point", { precision: 14, scale: 4 }).notNull().default("0"),
     purchaseUnitLabel: text("purchase_unit_label"),
     purchaseUnitConversionFactor: numeric("purchase_unit_conversion_factor", { precision: 14, scale: 4 }),
@@ -223,7 +223,7 @@ export const stockLedgerRawMaterials = pgTable(
     index("stock_ledger_rm_branch_item_idx").on(table.branchId, table.rawMaterialId, table.createdAt),
     check(
       "stock_ledger_rm_movement_type_check",
-      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_consume', 'sale_deduction')`,
+      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_consume', 'sale_deduction', 'purchase_receipt', 'waste_writeoff')`,
     ),
   ],
 );
@@ -253,7 +253,7 @@ export const stockLedgerProducts = pgTable(
     index("stock_ledger_p_branch_item_idx").on(table.branchId, table.productId, table.createdAt),
     check(
       "stock_ledger_p_movement_type_check",
-      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_yield', 'sale_deduction')`,
+      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_yield', 'sale_deduction', 'waste_writeoff')`,
     ),
   ],
 );
@@ -420,6 +420,133 @@ export const timePunches = pgTable(
     check(
       "time_punches_reason_matches_type_check",
       sql`(${table.type} = 'out' and ${table.reason} is not null) or (${table.type} = 'in' and ${table.reason} is null)`,
+    ),
+  ],
+);
+
+// ============================================================
+// Ops Phase 2, Milestone 1 — Suppliers, Purchase Orders, Goods Receiving,
+// Supplier Price History (see CLAUDE.md Phase Gate Protocol for the
+// authorization this was built under, and the migration file for design notes).
+// ============================================================
+
+export const suppliers = pgTable("suppliers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  contactName: text("contact_name"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  address: text("address"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const purchaseOrders = pgTable(
+  "purchase_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    poNumber: text("po_number").notNull().unique(),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    status: text("status").notNull().default("ordered"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    receivedBy: uuid("received_by").references(() => users.id),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("purchase_orders_supplier_id_idx").on(table.supplierId),
+    index("purchase_orders_branch_id_idx").on(table.branchId),
+    check("purchase_orders_status_check", sql`${table.status} in ('ordered', 'received', 'cancelled')`),
+  ],
+);
+
+export const purchaseOrderItems = pgTable(
+  "purchase_order_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    purchaseOrderId: uuid("purchase_order_id")
+      .notNull()
+      .references(() => purchaseOrders.id),
+    rawMaterialId: uuid("raw_material_id")
+      .notNull()
+      .references(() => rawMaterials.id),
+    quantityOrdered: numeric("quantity_ordered", { precision: 14, scale: 4 }).notNull(),
+    unitCost: numeric("unit_cost", { precision: 12, scale: 4 }).notNull(),
+    quantityReceived: numeric("quantity_received", { precision: 14, scale: 4 }),
+    actualUnitCost: numeric("actual_unit_cost", { precision: 12, scale: 4 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("purchase_order_items_po_id_idx").on(table.purchaseOrderId)],
+);
+
+export const supplierPriceHistory = pgTable(
+  "supplier_price_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    rawMaterialId: uuid("raw_material_id")
+      .notNull()
+      .references(() => rawMaterials.id),
+    unitCost: numeric("unit_cost", { precision: 12, scale: 4 }).notNull(),
+    purchaseOrderId: uuid("purchase_order_id")
+      .notNull()
+      .references(() => purchaseOrders.id),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("supplier_price_history_rm_idx").on(table.rawMaterialId, table.recordedAt),
+    index("supplier_price_history_supplier_idx").on(table.supplierId, table.recordedAt),
+  ],
+);
+
+// ============================================================
+// Ops Phase 2, Milestone 2 — Waste Management (reason codes + approval
+// workflow). See the migration file for the design rationale.
+// ============================================================
+
+export const wasteReports = pgTable(
+  "waste_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    itemType: text("item_type").notNull(),
+    rawMaterialId: uuid("raw_material_id").references(() => rawMaterials.id),
+    productId: uuid("product_id").references(() => products.id),
+    quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
+    reason: text("reason").notNull(),
+    notes: text("notes"),
+    status: text("status").notNull().default("pending"),
+    reportedBy: uuid("reported_by")
+      .notNull()
+      .references(() => users.id),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewNotes: text("review_notes"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("waste_reports_branch_id_idx").on(table.branchId, table.createdAt),
+    index("waste_reports_status_idx").on(table.status),
+    check("waste_reports_item_type_check", sql`${table.itemType} in ('raw_material', 'product')`),
+    check("waste_reports_reason_check", sql`${table.reason} in ('spoilage', 'damage', 'expiry')`),
+    check("waste_reports_status_check", sql`${table.status} in ('pending', 'approved', 'rejected')`),
+    check(
+      "waste_reports_item_ref_check",
+      sql`(${table.itemType} = 'raw_material' and ${table.rawMaterialId} is not null and ${table.productId} is null) or (${table.itemType} = 'product' and ${table.productId} is not null and ${table.rawMaterialId} is null)`,
     ),
   ],
 );

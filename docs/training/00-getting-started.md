@@ -45,9 +45,10 @@ After logging in you'll land on the **Executive Dashboard** (Owner/Admin) or the
 - **Transfers** — sending and receiving stock between locations
 - **Production** — recipes and production runs (commissary)
 - **POS** — the till screen for taking orders
+- **Time Clock** — clocking in/out for your shift (everyone — see `06-time-clock-guide.md`)
 - **Reports** — printable/exportable reports
 
-Every screen has a **Sign out** button in the top-right corner.
+Every screen has a **Sign out** button in the top-right corner. On a phone or tablet, the navigation is tucked behind a menu icon (☰) next to the logo instead of a sidebar — tap it to get the same list of screens.
 
 ## 5. One important habit: don't guess quantities
 

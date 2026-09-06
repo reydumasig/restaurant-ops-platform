@@ -10,7 +10,8 @@ Read in order, based on your role:
 | [03-commissary-production-guide.md](03-commissary-production-guide.md) | Commissary Staff |
 | [04-owner-admin-guide.md](04-owner-admin-guide.md) | Owner, Admin |
 | [05-printer-setup.md](05-printer-setup.md) | Whoever sets up each till (one-time, not daily use) |
+| [06-time-clock-guide.md](06-time-clock-guide.md) | **Everyone** — clocking in/out; Attendance Report for managers |
 
-These cover Ops Phase 1 only — the platform's current scope (Master Data, Inventory, Transfers, Production, POS, Dashboard, Reports). Later phases (procurement, advanced analytics, automation) will get their own guides once built.
+These cover Ops Phase 1 (Master Data, Inventory, Transfers, Production, POS, Dashboard, Reports) plus the Time Clock module, which was added afterward as its own small piece of scope — not part of Phase 1, and not payroll (no wage/overtime calculation exists). Later phases (procurement, advanced analytics, automation) will get their own guides once built.
 
 If something in the app doesn't match what a guide says, tell the Owner/Admin — these are living documents and should be corrected to match reality, not the other way around.

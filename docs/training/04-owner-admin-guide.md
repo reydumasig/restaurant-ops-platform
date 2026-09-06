@@ -54,6 +54,7 @@ Under **Reports**, five report types are available, each sortable by clicking a 
 - **Transfers** — every transfer ever made, with status
 - **Production** — every production run
 - **Daily Sales** — totals per day, per branch
+- **Attendance** — clock in/out hours per employee, per branch (see `06-time-clock-guide.md`) — a shift shows **Incomplete** when someone clocked in but never clocked out
 
 Use these for anything you need to hand off, print, or analyze outside the system (e.g. sending a weekly sales summary to an accountant, or archiving a month's inventory snapshot).
 
@@ -73,7 +74,8 @@ If a request comes up for one of these, it's a scoping conversation for the next
 
 ## 5. Data you should review before relying on this system day-to-day
 
-- Confirm the ~9 flagged approximate raw material costs (see Raw Materials above)
-- Set real selling prices on the ~30 freezer/retail products currently showing "Not set"
+- CLQ, Goat Meat (Kambing), and Bangus (Whole) costs have since been confirmed against actual supplier cost sheets and updated — no action needed on those three. **Lechon Kawali (Fried Pork Belly), Bulalo (Beef Shank/Bone Marrow), Beef (Sliced, for stir-fry), and Tuna** are still averaged/approximate — confirm these four against a current supplier invoice when you can.
+- **Jowls** was added as a new raw material (previously missing from the list entirely) — double check its cost and reorder point look right for how you actually buy it.
+- Set real selling prices on the ~37 freezer/retail products currently showing "Not set" — an item with no price rings up as ₱0 in POS.
 - A few raw materials (certain seafood mixes, "Bangus Steak" vs. regular Bangus, "Crispy Hipon" vs. "Buttered Garlic Shrimp") were deliberately left as separate items rather than merged, because we weren't certain they're identical preparations — check with your kitchen lead and merge or relabel as needed
 - The Senior/PWD discount calculation (20% off the VAT-exclusive amount) is a standard approximation, not a guarantee of BIR compliance for official receipts — if these printed receipts need to serve as your official tax receipts, verify the numbering/format requirements with your accountant or BIR before relying on them for that purpose

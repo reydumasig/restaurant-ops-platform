@@ -43,6 +43,7 @@ Once the branch confirms receipt, the transfer is done and cannot be changed fro
 
 ## 4. Daily checklist
 
+- Clock in on **Time Clock** at the start of your shift (see `06-time-clock-guide.md`).
 - Check **Inventory → Stock Levels** for anything flagged low-stock before starting the day's prep.
 - Run Production batches for anything that needs to be pre-made.
 - Dispatch Transfers for whatever branches are due a delivery.

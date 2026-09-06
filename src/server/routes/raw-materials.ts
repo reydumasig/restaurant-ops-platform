@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import { rawMaterials } from "@/db/schema";
 import { requireRole } from "@/server/middleware/auth";
 import { recordAudit } from "@/server/lib/audit";
+import { getPriceHistory } from "@/server/lib/purchasing";
 import type { AuthVariables } from "@/server/middleware/auth";
 
 export const rawMaterialsRoute = new Hono<{ Variables: AuthVariables }>();
@@ -30,6 +31,11 @@ rawMaterialsRoute.get("/:id", async (c) => {
   const [row] = await db.select().from(rawMaterials).where(eq(rawMaterials.id, c.req.param("id"))).limit(1);
   if (!row) return c.json({ error: "Not found" }, 404);
   return c.json(row);
+});
+
+rawMaterialsRoute.get("/:id/price-history", async (c) => {
+  const rows = await getPriceHistory({ rawMaterialId: c.req.param("id") });
+  return c.json(rows);
 });
 
 rawMaterialsRoute.post("/", requireRole("owner", "admin"), zValidator("json", rawMaterialInput), async (c) => {

@@ -4,6 +4,7 @@ import { ModuleShell } from "@/components/module-shell";
 const NAV_ITEMS = [
   { href: "/inventory", label: "Stock Levels" },
   { href: "/inventory/movement", label: "Stock In / Out / Adjust" },
+  { href: "/inventory/waste", label: "Waste Reports" },
   { href: "/inventory/ledger", label: "Stock Ledger" },
 ];
 

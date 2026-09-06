@@ -24,9 +24,10 @@ export type SharedMovementType =
   | "adjustment_decrease"
   | "transfer_out"
   | "transfer_in"
-  | "sale_deduction";
+  | "sale_deduction"
+  | "waste_writeoff";
 
-export type RawMaterialMovementType = SharedMovementType | "production_consume";
+export type RawMaterialMovementType = SharedMovementType | "production_consume" | "purchase_receipt";
 export type ProductMovementType = SharedMovementType | "production_yield";
 
 class InsufficientStockError extends Error {

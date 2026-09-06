@@ -154,18 +154,23 @@ insert into raw_materials (sku, name, category_id, unit_id, cost_per_unit, reord
   ('SKU-PUSO-NG-SAGING', 'Puso ng Saging', (select id from item_categories where name = 'Vegetables' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.07, 0),
   ('SKU-PECHAY', 'Pechay', (select id from item_categories where name = 'Vegetables' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.1, 0),
   ('SKU-LEMON', 'Lemon', (select id from item_categories where name = 'Fruits' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.1, 0),
-  -- Cost/gram across source rows ranged 0.42-0.70; used 0.60 (Lechon Kawali Specialty row). Confirm actual supplier cost.
+  -- Cost/gram across source rows ranged 0.42-0.70; used 0.60 (Lechon Kawali Specialty row). Still unconfirmed —
+  -- JOWLS ETC.docx only gives the finished "Lechon Kawali Special" dish-portion price (₱110/250g), not this raw-ingredient cost.
   ('SKU-LECHON-KAWALI-FRIED-PORK-BELLY', 'Lechon Kawali (Fried Pork Belly)', (select id from item_categories where name = 'Pork' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.6, 0),
-  -- Cost/piece from Chicken Inasal 40pc bag (₱2,700/40). Confirm against current supplier invoice.
-  ('SKU-CLQ-MARINATED-CHICKEN-LEG-QUARTER', 'CLQ (Marinated Chicken Leg Quarter)', (select id from item_categories where name = 'Chicken' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'pc'), 67.5, 0),
+  -- New raw material from JOWLS ETC.docx: Jowls box ₱5,050 / 25 kg = ₱0.202/g; sheet states ₱220/kg — used the sheet's stated figure.
+  ('SKU-JOWLS', 'Jowls', (select id from item_categories where name = 'Pork' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.22, 0),
+  -- Updated from JOWLS ETC.docx: CLQ box ₱1,905 / 15 pcs = ₱127.00/pc.
+  ('SKU-CLQ-MARINATED-CHICKEN-LEG-QUARTER', 'CLQ (Marinated Chicken Leg Quarter)', (select id from item_categories where name = 'Chicken' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'pc'), 127.0, 0),
   -- Averaged from two source rows (0.67-0.83/g). Confirm actual cost.
   ('SKU-BULALO-BEEF-SHANK-BONE-MARROW', 'Bulalo (Beef Shank/Bone Marrow)', (select id from item_categories where name = 'Beef' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.75, 0),
   -- Averaged from two source rows (0.60-0.83/g). Confirm actual cost.
   ('SKU-BEEF-SLICED-FOR-STIR-FRY', 'Beef (Sliced, for stir-fry)', (select id from item_categories where name = 'Beef' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.72, 0),
   -- Averaged from three source rows (0.64-0.87/g). Confirm actual cost.
-  ('SKU-GOAT-MEAT-KAMBING', 'Goat Meat (Kambing)', (select id from item_categories where name = 'Goat' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.78, 0),
+  -- Updated from JOWLS ETC.docx: raw Kambing ₱450/kg = ₱0.45/g.
+  ('SKU-GOAT-MEAT-KAMBING', 'Goat Meat (Kambing)', (select id from item_categories where name = 'Goat' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'g'), 0.45, 0),
   -- Per-piece cost varied widely (55-100). Confirm actual current supplier cost.
-  ('SKU-BANGUS-MILKFISH-WHOLE', 'Bangus (Milkfish, Whole)', (select id from item_categories where name = 'Seafood' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'pc'), 81.25, 0),
+  -- Updated from SEAFOODS ENCODE.docx: current Bangus cost ₱100.00/pc.
+  ('SKU-BANGUS-MILKFISH-WHOLE', 'Bangus (Milkfish, Whole)', (select id from item_categories where name = 'Seafood' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'pc'), 100.0, 0),
   -- Consistent across both source rows (12.5/pc). High confidence.
   ('SKU-HIPON-SHRIMP', 'Hipon (Shrimp)', (select id from item_categories where name = 'Seafood' and item_type = 'raw_material'), (select id from units_of_measure where abbreviation = 'pc'), 12.5, 0),
   -- Averaged from two source rows (0.75-0.80/g). Confirm actual cost.
