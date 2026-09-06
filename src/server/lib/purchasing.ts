@@ -76,7 +76,7 @@ async function priceVarianceFlag(rawMaterialId: string, newUnitCost: number, sam
   return { average, percentAboveAverage, sampleSize: recent.length };
 }
 
-export type PoReceiptInput = { id: string; quantityReceived: number; actualUnitCost?: number };
+export type PoReceiptInput = { id: string; quantityReceived: number; actualUnitCost?: number; expiryDate?: string };
 
 export async function receivePurchaseOrder(params: { purchaseOrderId: string; receivedBy: string; receipts: PoReceiptInput[] }) {
   const { purchaseOrderId, receivedBy, receipts } = params;
@@ -114,6 +114,8 @@ export async function receivePurchaseOrder(params: { purchaseOrderId: string; re
           performedBy: receivedBy,
           referenceType: "purchase_order",
           referenceId: po.id,
+          batchExpiryDate: receipt.expiryDate ?? null,
+          batchUnitCost: unitCost,
         },
         tx,
       );

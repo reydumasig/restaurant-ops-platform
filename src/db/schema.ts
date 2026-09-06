@@ -551,6 +551,112 @@ export const wasteReports = pgTable(
   ],
 );
 
+// ============================================================
+// Ops Phase 2, Milestone 3 — Stock Count / Cycle Count. See the migration
+// file for the design rationale.
+// ============================================================
+
+export const stockCounts = pgTable(
+  "stock_counts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    countNumber: text("count_number").notNull().unique(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    itemType: text("item_type").notNull(),
+    status: text("status").notNull().default("in_progress"),
+    startedBy: uuid("started_by")
+      .notNull()
+      .references(() => users.id),
+    completedBy: uuid("completed_by").references(() => users.id),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("stock_counts_branch_id_idx").on(table.branchId),
+    check("stock_counts_item_type_check", sql`${table.itemType} in ('raw_material', 'product')`),
+    check("stock_counts_status_check", sql`${table.status} in ('in_progress', 'completed', 'cancelled')`),
+  ],
+);
+
+export const stockCountItems = pgTable(
+  "stock_count_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    stockCountId: uuid("stock_count_id")
+      .notNull()
+      .references(() => stockCounts.id),
+    rawMaterialId: uuid("raw_material_id").references(() => rawMaterials.id),
+    productId: uuid("product_id").references(() => products.id),
+    expectedQuantity: numeric("expected_quantity", { precision: 14, scale: 4 }).notNull(),
+    countedQuantity: numeric("counted_quantity", { precision: 14, scale: 4 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("stock_count_items_count_id_idx").on(table.stockCountId),
+    check(
+      "stock_count_items_item_ref_check",
+      sql`(${table.rawMaterialId} is not null and ${table.productId} is null) or (${table.rawMaterialId} is null and ${table.productId} is not null)`,
+    ),
+  ],
+);
+
+// ============================================================
+// Ops Phase 2, Milestone 4 — Batch and Expiration (FIFO/FEFO) Tracking,
+// scoped to raw materials. See the migration file for design rationale.
+// ============================================================
+
+export const rawMaterialBatches = pgTable(
+  "raw_material_batches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    batchNumber: text("batch_number").notNull().unique(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    rawMaterialId: uuid("raw_material_id")
+      .notNull()
+      .references(() => rawMaterials.id),
+    receivedDate: date("received_date").notNull().defaultNow(),
+    expiryDate: date("expiry_date"),
+    quantityReceived: numeric("quantity_received", { precision: 14, scale: 4 }).notNull(),
+    quantityRemaining: numeric("quantity_remaining", { precision: 14, scale: 4 }).notNull(),
+    unitCost: numeric("unit_cost", { precision: 12, scale: 4 }),
+    sourceType: text("source_type").notNull(),
+    sourceId: uuid("source_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("raw_material_batches_fefo_idx").on(table.branchId, table.rawMaterialId, table.expiryDate, table.receivedDate),
+    check(
+      "raw_material_batches_source_type_check",
+      sql`${table.sourceType} in ('stock_in', 'purchase_receipt', 'transfer_in', 'adjustment_increase', 'legacy_balance')`,
+    ),
+    check("raw_material_batches_remaining_check", sql`${table.quantityRemaining} >= 0 and ${table.quantityRemaining} <= ${table.quantityReceived}`),
+  ],
+);
+
+export const rawMaterialBatchAllocations = pgTable(
+  "raw_material_batch_allocations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => rawMaterialBatches.id),
+    stockLedgerId: uuid("stock_ledger_id")
+      .notNull()
+      .references(() => stockLedgerRawMaterials.id),
+    quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("raw_material_batch_allocations_batch_idx").on(table.batchId),
+    index("raw_material_batch_allocations_ledger_idx").on(table.stockLedgerId),
+  ],
+);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {

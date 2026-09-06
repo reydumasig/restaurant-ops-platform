@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { inventoryStockProducts, inventoryStockRawMaterials, productionRuns } from "@/db/schema";
+import { getBatchesForItem } from "@/server/lib/batches";
 import { applyStockMovement, InsufficientStockError } from "@/server/lib/inventory";
 import { runProduction } from "@/server/lib/production";
 import { createTestBranch, createTestProduct, createTestRawMaterial, createTestRecipe, createTestUser } from "../helpers/fixtures";
@@ -57,6 +58,12 @@ describe("runProduction", () => {
     expect(await rawMaterialStockOf(branch.id, flour.id)).toBe(5000 - 1250);
     expect(await rawMaterialStockOf(branch.id, sugar.id)).toBe(5000 - 500);
     expect(await productStockOf(branch.id, product.id)).toBe(25);
+
+    // Production consumption is FEFO-tracked automatically, with no
+    // production-specific integration code — it goes through the same
+    // applyStockMovement choke point as everything else.
+    const [flourBatch] = await getBatchesForItem({ branchId: branch.id, rawMaterialId: flour.id });
+    expect(Number(flourBatch.quantityRemaining)).toBe(5000 - 1250);
   });
 
   it("rolls back the entire run (no partial consumption, no yield, no run row) when one ingredient is short", async () => {

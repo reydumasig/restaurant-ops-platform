@@ -6,6 +6,7 @@ import {
   stockLedgerProducts,
   stockLedgerRawMaterials,
 } from "@/db/schema";
+import { type BatchSourceType, createBatch, consumeFefo } from "@/server/lib/batches";
 
 export type ItemType = "raw_material" | "product";
 
@@ -15,7 +16,7 @@ export type ItemType = "raw_material" | "product";
  * transfers) instead of always opening its own, which would otherwise break
  * atomicity between the ledger write and whatever else the caller is doing.
  */
-type DbExecutor = Pick<typeof db, "select" | "insert" | "update" | "delete" | "transaction">;
+export type DbExecutor = Pick<typeof db, "select" | "insert" | "update" | "delete" | "transaction">;
 
 export type SharedMovementType =
   | "stock_in"
@@ -37,6 +38,19 @@ class InsufficientStockError extends Error {
 }
 export { InsufficientStockError };
 
+/** Only the raw material movement types that ever carry a positive delta. */
+function inferBatchSourceType(movementType: string): BatchSourceType {
+  switch (movementType) {
+    case "stock_in":
+    case "purchase_receipt":
+    case "transfer_in":
+    case "adjustment_increase":
+      return movementType;
+    default:
+      throw new Error(`Movement type "${movementType}" has no batch source mapping for a stock increase`);
+  }
+}
+
 /**
  * Applies a signed quantity change to a branch's stock for one item and
  * writes the matching append-only ledger row in the same transaction. This
@@ -54,10 +68,25 @@ export async function applyStockMovement(
     referenceType?: string;
     referenceId?: string;
     notes?: string;
+    /**
+     * Raw materials only, and only meaningful when quantityDelta > 0: the
+     * expiry date / cost to record on the new batch this increase creates.
+     * Ignored for decreases (which draw FEFO from existing batches instead)
+     * and for products (not batch-tracked).
+     */
+    batchExpiryDate?: string | null;
+    batchUnitCost?: number | null;
+    /**
+     * Raw materials only. When a caller already knows exactly which lot(s)
+     * an increase should be recorded under — a stock transfer's receiving
+     * side reconstructing the expiry/cost of what was actually shipped —
+     * pass them here instead of minting one generic batch.
+     */
+    batchOverride?: Array<{ quantity: number; expiryDate?: string | null; unitCost?: number | null }>;
   },
   executor: DbExecutor = db,
 ) {
-  const { branchId, itemType, itemId, movementType, quantityDelta, performedBy, referenceType, referenceId, notes } = params;
+  const { branchId, itemType, itemId, movementType, quantityDelta, performedBy, referenceType, referenceId, notes, batchExpiryDate, batchUnitCost, batchOverride } = params;
 
   return executor.transaction(async (tx) => {
     if (itemType === "raw_material") {
@@ -100,6 +129,36 @@ export async function applyStockMovement(
           notes,
         })
         .returning();
+
+      if (quantityDelta > 0) {
+        const sourceType = inferBatchSourceType(movementType);
+        if (batchOverride && batchOverride.length > 0) {
+          for (const b of batchOverride) {
+            if (b.quantity <= 0) continue;
+            await createBatch(tx, {
+              branchId,
+              rawMaterialId: itemId,
+              quantity: b.quantity,
+              expiryDate: b.expiryDate,
+              unitCost: b.unitCost,
+              sourceType,
+              sourceId: referenceId,
+            });
+          }
+        } else {
+          await createBatch(tx, {
+            branchId,
+            rawMaterialId: itemId,
+            quantity: quantityDelta,
+            expiryDate: batchExpiryDate,
+            unitCost: batchUnitCost,
+            sourceType,
+            sourceId: referenceId,
+          });
+        }
+      } else if (quantityDelta < 0) {
+        await consumeFefo(tx, { branchId, rawMaterialId: itemId, quantity: -quantityDelta, stockLedgerId: ledgerRow.id });
+      }
 
       return ledgerRow;
     }

@@ -103,6 +103,7 @@ const receiveInput = z.object({
       id: z.string().uuid(),
       quantityReceived: z.coerce.number().nonnegative(),
       actualUnitCost: z.coerce.number().nonnegative().optional(),
+      expiryDate: z.string().optional(),
     }),
   ),
 });

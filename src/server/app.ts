@@ -17,6 +17,8 @@ import { timekeepingRoute } from "@/server/routes/timekeeping";
 import { suppliersRoute } from "@/server/routes/suppliers";
 import { purchaseOrdersRoute } from "@/server/routes/purchase-orders";
 import { wasteRoute } from "@/server/routes/waste";
+import { stockCountsRoute } from "@/server/routes/stock-counts";
+import { batchesRoute } from "@/server/routes/batches";
 
 export const app = new Hono().basePath("/api");
 
@@ -49,6 +51,8 @@ authed.route("/timekeeping", timekeepingRoute);
 authed.route("/suppliers", suppliersRoute);
 authed.route("/purchase-orders", purchaseOrdersRoute);
 authed.route("/waste-reports", wasteRoute);
+authed.route("/stock-counts", stockCountsRoute);
+authed.route("/batches", batchesRoute);
 
 app.route("/", authed);
 

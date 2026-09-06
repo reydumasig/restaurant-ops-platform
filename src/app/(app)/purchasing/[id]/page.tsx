@@ -51,6 +51,7 @@ export default function PurchaseOrderDetailPage() {
   const [data, setData] = useState<PoDetail | null>(null);
   const [receivedQty, setReceivedQty] = useState<Record<string, string>>({});
   const [actualCost, setActualCost] = useState<Record<string, string>>({});
+  const [expiryDate, setExpiryDate] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<"receive" | "cancel" | null>(null);
 
@@ -91,6 +92,7 @@ export default function PurchaseOrderDetailPage() {
             id: i.id,
             quantityReceived: Number(receivedQty[i.id] ?? 0),
             actualUnitCost: Number(actualCost[i.id] ?? i.unitCost),
+            expiryDate: expiryDate[i.id] || undefined,
           })),
         }),
       });
@@ -166,6 +168,7 @@ export default function PurchaseOrderDetailPage() {
                 <TableHead>Unit Cost</TableHead>
                 <TableHead>Received</TableHead>
                 <TableHead>Actual Cost</TableHead>
+                <TableHead>Expiry Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -203,6 +206,18 @@ export default function PurchaseOrderDetailPage() {
                         />
                       ) : (
                         (item.actualUnitCost && `₱${Number(item.actualUnitCost).toFixed(4)}`) ?? "—"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {po.status === "ordered" ? (
+                        <Input
+                          type="date"
+                          value={expiryDate[item.id] ?? ""}
+                          onChange={(e) => setExpiryDate((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                          className="w-36"
+                        />
+                      ) : (
+                        "—"
                       )}
                     </TableCell>
                   </TableRow>

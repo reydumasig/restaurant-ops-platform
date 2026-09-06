@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { inventoryStockRawMaterials, stockTransferItemsRawMaterials, stockTransfers } from "@/db/schema";
+import { getBatchesForItem } from "@/server/lib/batches";
 import { applyStockMovement } from "@/server/lib/inventory";
 import { cancelTransfer, confirmReceipt, createTransfer } from "@/server/lib/transfers";
 import { createTestBranch, createTestRawMaterial, createTestUser } from "../helpers/fixtures";
@@ -137,5 +138,118 @@ describe("stock transfers", () => {
     const cancelled = await cancelTransfer({ transferId: transfer.id, cancelledBy: performedBy });
     expect(cancelled.status).toBe("cancelled");
     expect(await rawMaterialStockOf(from.id, rice.id)).toBe(100);
+  });
+
+  it("preserves the shipped batch's expiry date at the destination branch on receipt", async () => {
+    const from = await createTestBranch("commissary");
+    const to = await createTestBranch();
+    const rice = await createTestRawMaterial();
+    await applyStockMovement({
+      branchId: from.id,
+      itemType: "raw_material",
+      itemId: rice.id,
+      movementType: "stock_in",
+      quantityDelta: 100,
+      performedBy,
+      batchExpiryDate: "2026-10-15",
+    });
+
+    const transfer = await createTransfer({
+      fromBranchId: from.id,
+      toBranchId: to.id,
+      createdBy: performedBy,
+      items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+    });
+    const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, transfer.id));
+
+    await confirmReceipt({
+      transferId: transfer.id,
+      receivedBy: performedBy,
+      rawMaterialReceipts: [{ id: line.id, quantityReceived: 40 }],
+      productReceipts: [],
+    });
+
+    const destBatches = await getBatchesForItem({ branchId: to.id, rawMaterialId: rice.id });
+    expect(destBatches).toHaveLength(1);
+    expect(destBatches[0].expiryDate).toBe("2026-10-15");
+    expect(Number(destBatches[0].quantityRemaining)).toBe(40);
+    expect(destBatches[0].sourceType).toBe("transfer_in");
+  });
+
+  it("splits a partial receipt proportionally across whatever distinct batches were shipped", async () => {
+    const from = await createTestBranch("commissary");
+    const to = await createTestBranch();
+    const rice = await createTestRawMaterial();
+    // Two distinct source batches with different expiries.
+    await applyStockMovement({
+      branchId: from.id,
+      itemType: "raw_material",
+      itemId: rice.id,
+      movementType: "stock_in",
+      quantityDelta: 30,
+      performedBy,
+      batchExpiryDate: "2026-09-10",
+    });
+    await applyStockMovement({
+      branchId: from.id,
+      itemType: "raw_material",
+      itemId: rice.id,
+      movementType: "stock_in",
+      quantityDelta: 30,
+      performedBy,
+      batchExpiryDate: "2026-12-31",
+    });
+
+    // FEFO draws 30 from the sooner-expiring batch + 10 from the later one.
+    const transfer = await createTransfer({
+      fromBranchId: from.id,
+      toBranchId: to.id,
+      createdBy: performedBy,
+      items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+    });
+    const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, transfer.id));
+
+    // Destination only receives half of what was shipped — a partial receipt.
+    await confirmReceipt({
+      transferId: transfer.id,
+      receivedBy: performedBy,
+      rawMaterialReceipts: [{ id: line.id, quantityReceived: 20 }],
+      productReceipts: [],
+    });
+
+    const destBatches = await getBatchesForItem({ branchId: to.id, rawMaterialId: rice.id });
+    expect(destBatches).toHaveLength(2);
+    const soon = destBatches.find((b) => b.expiryDate === "2026-09-10")!;
+    const later = destBatches.find((b) => b.expiryDate === "2026-12-31")!;
+    expect(Number(soon.quantityRemaining)).toBeCloseTo(15); // 30 shipped * (20/40 received)
+    expect(Number(later.quantityRemaining)).toBeCloseTo(5); // 10 shipped * (20/40 received)
+  });
+
+  it("preserves the original expiry when a cancelled transfer returns stock to the source", async () => {
+    const from = await createTestBranch("commissary");
+    const to = await createTestBranch();
+    const rice = await createTestRawMaterial();
+    await applyStockMovement({
+      branchId: from.id,
+      itemType: "raw_material",
+      itemId: rice.id,
+      movementType: "stock_in",
+      quantityDelta: 100,
+      performedBy,
+      batchExpiryDate: "2026-11-01",
+    });
+
+    const transfer = await createTransfer({
+      fromBranchId: from.id,
+      toBranchId: to.id,
+      createdBy: performedBy,
+      items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+    });
+    await cancelTransfer({ transferId: transfer.id, cancelledBy: performedBy });
+
+    const sourceBatches = await getBatchesForItem({ branchId: from.id, rawMaterialId: rice.id });
+    const withExpiry = sourceBatches.filter((b) => b.expiryDate === "2026-11-01");
+    const totalRemaining = withExpiry.reduce((sum, b) => sum + Number(b.quantityRemaining), 0);
+    expect(totalRemaining).toBe(100); // 60 untouched + 40 restored, same expiry preserved throughout
   });
 });

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { inventoryStockRawMaterials, purchaseOrderItems, rawMaterials, suppliers } from "@/db/schema";
+import { getBatchesForItem } from "@/server/lib/batches";
 import { cancelPurchaseOrder, createPurchaseOrder, getPriceHistory, receivePurchaseOrder } from "@/server/lib/purchasing";
 import { createTestBranch, createTestRawMaterial, createTestUser, uniqueSuffix } from "../helpers/fixtures";
 
@@ -56,6 +57,32 @@ describe("purchase orders", () => {
 
     const [updatedRm] = await db.select().from(rawMaterials).where(eq(rawMaterials.id, rice.id));
     expect(Number(updatedRm.costPerUnit)).toBe(0.06);
+  });
+
+  it("records a batch with the supplier's expiry date and actual cost on receipt", async () => {
+    const branch = await createTestBranch("commissary");
+    const supplier = await createTestSupplier();
+    const rice = await createTestRawMaterial({ costPerUnit: 1 });
+
+    const po = await createPurchaseOrder({
+      supplierId: supplier.id,
+      branchId: branch.id,
+      createdBy: performedBy,
+      items: [{ rawMaterialId: rice.id, quantity: 200, unitCost: 0.05 }],
+    });
+    const [line] = await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, po.id));
+
+    await receivePurchaseOrder({
+      purchaseOrderId: po.id,
+      receivedBy: performedBy,
+      receipts: [{ id: line.id, quantityReceived: 200, actualUnitCost: 0.07, expiryDate: "2026-10-01" }],
+    });
+
+    const batches = await getBatchesForItem({ branchId: branch.id, rawMaterialId: rice.id });
+    expect(batches).toHaveLength(1);
+    expect(batches[0].expiryDate).toBe("2026-10-01");
+    expect(Number(batches[0].unitCost)).toBe(0.07);
+    expect(batches[0].sourceType).toBe("purchase_receipt");
   });
 
   it("flags a receipt priced well above the recent average, without blocking it", async () => {

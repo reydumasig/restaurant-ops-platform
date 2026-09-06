@@ -1,12 +1,57 @@
-import { desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { db } from "@/db/client";
-import { stockTransferItemsProducts, stockTransferItemsRawMaterials, stockTransfers } from "@/db/schema";
-import { applyStockMovement, type ItemType } from "@/server/lib/inventory";
+import { stockLedgerRawMaterials, stockTransferItemsProducts, stockTransferItemsRawMaterials, stockTransfers } from "@/db/schema";
+import { getBatchAllocationsForLedger } from "@/server/lib/batches";
+import { applyStockMovement, type DbExecutor, type ItemType } from "@/server/lib/inventory";
 
 function generateTransferNo() {
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `TRF-${stamp}-${random}`;
+}
+
+/**
+ * Reconstructs which batch(es) a raw material transfer's receiving side
+ * should be recorded under, by looking up the allocations the original
+ * transfer_out draw made and scaling them to the fraction actually
+ * received (a partial receipt splits proportionally across whatever
+ * batches were shipped). Falls back to `undefined` — applyStockMovement
+ * then mints one generic no-expiry batch — when the transfer_out ledger
+ * row or its allocations can't be found (shouldn't happen for a transfer
+ * created after this migration, but never worth failing the receipt over).
+ */
+async function computeBatchOverride(
+  tx: DbExecutor,
+  params: { transferId: string; rawMaterialId: string; quantityReceived: number; quantitySent: number },
+) {
+  const { transferId, rawMaterialId, quantityReceived, quantitySent } = params;
+  if (quantityReceived <= 0 || quantitySent <= 0) return undefined;
+
+  const [outLedger] = await tx
+    .select({ id: stockLedgerRawMaterials.id })
+    .from(stockLedgerRawMaterials)
+    .where(
+      and(
+        eq(stockLedgerRawMaterials.referenceType, "stock_transfer"),
+        eq(stockLedgerRawMaterials.referenceId, transferId),
+        eq(stockLedgerRawMaterials.rawMaterialId, rawMaterialId),
+        eq(stockLedgerRawMaterials.movementType, "transfer_out"),
+      ),
+    )
+    .limit(1);
+  if (!outLedger) return undefined;
+
+  const sourceAllocations = await getBatchAllocationsForLedger(outLedger.id);
+  if (sourceAllocations.length === 0) return undefined;
+
+  const fraction = quantityReceived / quantitySent;
+  return sourceAllocations
+    .map((a) => ({
+      quantity: Number(a.quantity) * fraction,
+      expiryDate: a.expiryDate,
+      unitCost: a.unitCost != null ? Number(a.unitCost) : null,
+    }))
+    .filter((b) => b.quantity > 0);
 }
 
 export type TransferLineInput = { itemType: ItemType; itemId: string; quantity: number };
@@ -110,6 +155,13 @@ export async function confirmReceipt(params: {
         .set({ quantityReceived: String(receipt.quantityReceived) })
         .where(eq(stockTransferItemsRawMaterials.id, receipt.id));
 
+      const batchOverride = await computeBatchOverride(tx, {
+        transferId: transfer.id,
+        rawMaterialId: line.rawMaterialId,
+        quantityReceived: receipt.quantityReceived,
+        quantitySent: Number(line.quantitySent),
+      });
+
       await applyStockMovement(
         {
           branchId: transfer.toBranchId,
@@ -120,6 +172,7 @@ export async function confirmReceipt(params: {
           performedBy: receivedBy,
           referenceType: "stock_transfer",
           referenceId: transfer.id,
+          batchOverride,
         },
         tx,
       );
@@ -177,6 +230,13 @@ export async function cancelTransfer(params: { transferId: string; cancelledBy: 
     const productItems = await tx.select().from(stockTransferItemsProducts).where(eq(stockTransferItemsProducts.transferId, transferId));
 
     for (const item of rawMaterialItems) {
+      const batchOverride = await computeBatchOverride(tx, {
+        transferId: transfer.id,
+        rawMaterialId: item.rawMaterialId,
+        quantityReceived: Number(item.quantitySent),
+        quantitySent: Number(item.quantitySent),
+      });
+
       await applyStockMovement(
         {
           branchId: transfer.fromBranchId,
@@ -188,6 +248,7 @@ export async function cancelTransfer(params: { transferId: string; cancelledBy: 
           referenceType: "stock_transfer_cancel",
           referenceId: transfer.id,
           notes: "Transfer cancelled — stock returned to source branch",
+          batchOverride,
         },
         tx,
       );

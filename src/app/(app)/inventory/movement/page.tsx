@@ -27,6 +27,7 @@ export default function StockMovementPage() {
   const [products, setProducts] = useState<Item[]>([]);
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -55,7 +56,14 @@ export default function StockMovementPage() {
     const body =
       mode === "adjustment"
         ? { branchId, itemType, itemId, correctedQuantity: Number(quantity), notes: notes || undefined }
-        : { branchId, itemType, itemId, quantity: Number(quantity), notes: notes || undefined };
+        : {
+            branchId,
+            itemType,
+            itemId,
+            quantity: Number(quantity),
+            notes: notes || undefined,
+            expiryDate: mode === "stock-in" && itemType === "raw_material" ? expiryDate || undefined : undefined,
+          };
 
     const res = await fetch(endpoint, {
       method: "POST",
@@ -74,6 +82,7 @@ export default function StockMovementPage() {
     setSuccess(`${MODE_LABELS[mode]} recorded.`);
     setItemId("");
     setQuantity("");
+    setExpiryDate("");
     setNotes("");
   }
 
@@ -167,6 +176,13 @@ export default function StockMovementPage() {
                 required
               />
             </div>
+
+            {mode === "stock-in" && itemType === "raw_material" && (
+              <div className="space-y-1.5">
+                <Label>Expiry Date (optional)</Label>
+                <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>Notes (optional)</Label>

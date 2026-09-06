@@ -159,6 +159,7 @@ const movementInput = z.object({
   itemId: z.string().uuid(),
   quantity: z.coerce.number().positive(),
   notes: z.string().optional(),
+  expiryDate: z.string().optional(),
 });
 
 inventoryRoute.post(
@@ -179,6 +180,7 @@ inventoryRoute.post(
       performedBy: authUser.id,
       referenceType: "manual_stock_in",
       notes: input.notes,
+      batchExpiryDate: input.itemType === "raw_material" ? (input.expiryDate ?? null) : undefined,
     });
 
     return c.json(ledgerRow, 201);
