@@ -20,6 +20,7 @@ import { wasteRoute } from "@/server/routes/waste";
 import { stockCountsRoute } from "@/server/routes/stock-counts";
 import { batchesRoute } from "@/server/routes/batches";
 import { analyticsRoute } from "@/server/routes/analytics";
+import { posShiftsRoute } from "@/server/routes/pos-shifts";
 
 export const app = new Hono().basePath("/api");
 
@@ -55,6 +56,7 @@ authed.route("/waste-reports", wasteRoute);
 authed.route("/stock-counts", stockCountsRoute);
 authed.route("/batches", batchesRoute);
 authed.route("/analytics", analyticsRoute);
+authed.route("/pos-shifts", posShiftsRoute);
 
 app.route("/", authed);
 

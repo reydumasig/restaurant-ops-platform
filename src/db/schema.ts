@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   index,
   check,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -362,10 +363,12 @@ export const posSales = pgTable(
     discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull().default("0"),
     tenderedAmount: numeric("tendered_amount", { precision: 12, scale: 2 }),
     changeAmount: numeric("change_amount", { precision: 12, scale: 2 }),
+    shiftId: uuid("shift_id").references((): AnyPgColumn => posShifts.id),
   },
   (table) => [
     uniqueIndex("pos_sales_branch_reference_key").on(table.branchId, table.posReference),
     index("pos_sales_branch_date_idx").on(table.branchId, table.saleDate),
+    index("pos_sales_shift_id_idx").on(table.shiftId),
   ],
 );
 
@@ -386,6 +389,43 @@ export const posSaleItems = pgTable(
   (table) => [
     index("pos_sale_items_sale_id_idx").on(table.posSaleId),
     index("pos_sale_items_product_id_idx").on(table.productId),
+  ],
+);
+
+// ============================================================
+// POS Shift Management — a till/drawer control local to the internal POS
+// module (itself a separate, separately-quoted add-on outside the Ops
+// Platform's Phase 1-3 SOW). See the migration file for the design
+// rationale and why this is distinct from CASA OS's cash management.
+// ============================================================
+
+export const posShifts = pgTable(
+  "pos_shifts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    status: text("status").notNull().default("open"),
+    startingCash: numeric("starting_cash", { precision: 12, scale: 2 }).notNull(),
+    openedBy: uuid("opened_by")
+      .notNull()
+      .references(() => users.id),
+    openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+    closedBy: uuid("closed_by").references(() => users.id),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    countedCash: numeric("counted_cash", { precision: 12, scale: 2 }),
+    expectedCash: numeric("expected_cash", { precision: 12, scale: 2 }),
+    cashVariance: numeric("cash_variance", { precision: 12, scale: 2 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("pos_shifts_branch_id_idx").on(table.branchId, table.openedAt),
+    uniqueIndex("pos_shifts_one_open_per_branch")
+      .on(table.branchId)
+      .where(sql`${table.status} = 'open'`),
+    check("pos_shifts_status_check", sql`${table.status} in ('open', 'closed')`),
   ],
 );
 

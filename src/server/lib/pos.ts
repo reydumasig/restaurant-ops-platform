@@ -2,6 +2,7 @@ import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { posSaleItems, posSales, products, recipeItems, recipes } from "@/db/schema";
 import { applyStockMovement, InsufficientStockError } from "@/server/lib/inventory";
+import { getOpenShift } from "@/server/lib/pos-shifts";
 
 const VAT_RATE = 0.12;
 
@@ -53,6 +54,8 @@ export async function createSale(params: {
   const { discountAmount, total } = computeTotals(lines, discountType);
   if (tenderedAmount < total) throw new Error("Tendered amount is less than the total due");
 
+  const openShift = await getOpenShift(branchId);
+
   return db.transaction(async (tx) => {
     const [sale] = await tx
       .insert(posSales)
@@ -66,6 +69,7 @@ export async function createSale(params: {
         discountAmount: String(discountAmount),
         tenderedAmount: String(tenderedAmount),
         changeAmount: String(tenderedAmount - total),
+        shiftId: openShift?.id,
       })
       .returning();
 
