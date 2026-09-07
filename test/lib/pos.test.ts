@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { inventoryStockProducts, inventoryStockRawMaterials, posSaleItems, posSales } from "@/db/schema";
 import { applyStockMovement, InsufficientStockError } from "@/server/lib/inventory";
-import { createSale } from "@/server/lib/pos";
+import { addItemsToOrder, createOpenOrder, createSale, getDailySalesReport, getSalesSummary, listSales } from "@/server/lib/pos";
 import { createTestBranch, createTestProduct, createTestRawMaterial, createTestRecipe, createTestUser } from "../helpers/fixtures";
 
 describe("createSale", () => {
@@ -131,5 +131,34 @@ describe("createSale", () => {
         performedBy,
       }),
     ).rejects.toThrow("Tendered amount is less than the total due");
+  });
+});
+
+describe("sales reporting excludes still-open tabs", () => {
+  let performedBy: string;
+
+  beforeAll(async () => {
+    performedBy = await createTestUser();
+  });
+
+  it("listSales, getSalesSummary, and getDailySalesReport all exclude an unpaid open order", async () => {
+    const branch = await createTestBranch();
+    const product = await createTestProduct({ price: 999 }); // distinctive amount, easy to spot if leaked in
+    await applyStockMovement({ branchId: branch.id, itemType: "product", itemId: product.id, movementType: "stock_in", quantityDelta: 10, performedBy });
+
+    const order = await createOpenOrder({ branchId: branch.id, performedBy });
+    await addItemsToOrder({ orderId: order.id, lines: [{ productId: product.id, quantity: 1 }], performedBy });
+
+    const sales = await listSales({ branchId: branch.id });
+    expect(sales.find((s) => s.id === order.id)).toBeUndefined();
+
+    const today = new Date().toISOString().slice(0, 10);
+    const summary = await getSalesSummary({ branchId: branch.id, date: today });
+    expect(Number(summary.totalSales)).toBe(0);
+    expect(Number(summary.transactionCount)).toBe(0);
+
+    const daily = await getDailySalesReport({ branchId: branch.id });
+    const todayRow = daily.find((r) => r.saleDate === today);
+    expect(todayRow).toBeUndefined();
   });
 });

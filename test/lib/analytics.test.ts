@@ -9,7 +9,7 @@ import {
   getProductProfitability,
 } from "@/server/lib/analytics";
 import { applyStockMovement } from "@/server/lib/inventory";
-import { createSale } from "@/server/lib/pos";
+import { addItemsToOrder, createOpenOrder, createSale } from "@/server/lib/pos";
 import { createTestBranch, createTestProduct, createTestRawMaterial, createTestRecipe, createTestUser } from "../helpers/fixtures";
 
 function isoDate(offsetDays: number) {
@@ -137,5 +137,26 @@ describe("Phase 3 analytics", () => {
     expect(row.transactionCount).toBe(2);
     expect(row.totalSales).toBe(150);
     expect(row.averageTicket).toBe(75);
+  });
+
+  it("an unpaid open tab doesn't inflate branch performance or profitability figures", async () => {
+    const branch = await createTestBranch();
+    const product = await createTestProduct({ price: 500 }); // distinctive amount, easy to spot if leaked in
+    await applyStockMovement({ branchId: branch.id, itemType: "product", itemId: product.id, movementType: "stock_in", quantityDelta: 10, performedBy });
+
+    const order = await createOpenOrder({ branchId: branch.id, performedBy });
+    await addItemsToOrder({ orderId: order.id, lines: [{ productId: product.id, quantity: 1 }], performedBy });
+
+    const performanceRows = await getBranchPerformance({ from: isoDate(-1), to: isoDate(1) });
+    const performanceRow = performanceRows.find((r) => r.branchId === branch.id)!;
+    expect(performanceRow.totalSales).toBe(0);
+    expect(performanceRow.transactionCount).toBe(0);
+
+    const productRows = await getProductProfitability({ from: isoDate(-1), to: isoDate(1) });
+    expect(productRows.find((r) => r.productId === product.id)).toBeUndefined();
+
+    const branchProfitRows = await getBranchProfitability({ from: isoDate(-1), to: isoDate(1) });
+    const branchProfitRow = branchProfitRows.find((r) => r.branchId === branch.id);
+    expect(branchProfitRow).toBeUndefined(); // no closed sales at all for this branch in range
   });
 });

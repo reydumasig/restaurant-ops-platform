@@ -47,7 +47,14 @@ export async function closeShift(params: { shiftId: string; countedCash: number;
     if (!shift) throw new Error("Shift not found");
     if (shift.status !== "open") throw new Error("Shift is already closed");
 
-    const salesRows = await tx.select({ totalAmount: posSales.totalAmount }).from(posSales).where(eq(posSales.shiftId, shiftId));
+    // shiftId is only ever set on closed sales (an open tab isn't tagged
+    // to a shift until it's paid — see pos.ts's payAndCloseOrder), but the
+    // explicit status filter documents that invariant rather than relying
+    // on it silently.
+    const salesRows = await tx
+      .select({ totalAmount: posSales.totalAmount })
+      .from(posSales)
+      .where(and(eq(posSales.shiftId, shiftId), eq(posSales.status, "closed")));
     const salesTotal = salesRows.reduce((sum, r) => sum + Number(r.totalAmount), 0);
     const expectedCash = Number(shift.startingCash) + salesTotal;
     const cashVariance = countedCash - expectedCash;

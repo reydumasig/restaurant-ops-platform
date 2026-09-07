@@ -364,11 +364,15 @@ export const posSales = pgTable(
     tenderedAmount: numeric("tendered_amount", { precision: 12, scale: 2 }),
     changeAmount: numeric("change_amount", { precision: 12, scale: 2 }),
     shiftId: uuid("shift_id").references((): AnyPgColumn => posShifts.id),
+    status: text("status").notNull().default("closed"),
+    tableLabel: text("table_label"),
   },
   (table) => [
     uniqueIndex("pos_sales_branch_reference_key").on(table.branchId, table.posReference),
     index("pos_sales_branch_date_idx").on(table.branchId, table.saleDate),
     index("pos_sales_shift_id_idx").on(table.shiftId),
+    index("pos_sales_status_idx").on(table.branchId, table.status),
+    check("pos_sales_status_check", sql`${table.status} in ('open', 'closed', 'void')`),
   ],
 );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -15,24 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type Category = { id: string; name: string; itemType: "raw_material" | "product" };
-type Product = { id: string; sku: string; name: string; categoryId: string; price: string; active: boolean };
-type CartLine = { productId: string; name: string; price: number; quantity: number };
 type Shift = { id: string; branchId: string; startingCash: string; status: "open" | "closed" };
 type ClosedShiftSummary = { startingCash: string; expectedCash: string; countedCash: string; cashVariance: string };
+type OpenOrder = { id: string; tableLabel: string | null; totalAmount: string; importedAt: string };
 
 export default function PosPage() {
   const router = useRouter();
   const currentUser = useCurrentUser();
   const { branches, branchId, setBranchId } = useBranchSelector();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [activeCategoryId, setActiveCategoryId] = useState<string>("");
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [discountType, setDiscountType] = useState<"none" | "senior_pwd">("none");
-  const [tendered, setTendered] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const [shift, setShift] = useState<Shift | null | undefined>(undefined); // undefined = loading
   const [startingCash, setStartingCash] = useState("");
@@ -43,6 +33,13 @@ export default function PosPage() {
   const [closingShift, setClosingShift] = useState(false);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [closedSummary, setClosedSummary] = useState<ClosedShiftSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [openOrders, setOpenOrders] = useState<OpenOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [newOrderModalOpen, setNewOrderModalOpen] = useState(false);
+  const [tableLabel, setTableLabel] = useState("");
+  const [creatingOrder, setCreatingOrder] = useState(false);
 
   function loadOpenShift() {
     if (!branchId) return;
@@ -52,18 +49,19 @@ export default function PosPage() {
       .then(setShift);
   }
 
-  useEffect(loadOpenShift, [branchId]);
+  function loadOpenOrders() {
+    if (!branchId) return;
+    setOrdersLoading(true);
+    fetch(`/api/pos/orders?branchId=${branchId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setOpenOrders(data);
+        setOrdersLoading(false);
+      });
+  }
 
-  useEffect(() => {
-    Promise.all([fetch("/api/categories").then((r) => r.json()), fetch("/api/products").then((r) => r.json())]).then(
-      ([catRows, productRows]: [Category[], Product[]]) => {
-        const productCats = catRows.filter((c) => c.itemType === "product");
-        setCategories(productCats);
-        setProducts(productRows.filter((p) => p.active));
-        setActiveCategoryId(productCats[0]?.id ?? "");
-      },
-    );
-  }, []);
+  useEffect(loadOpenShift, [branchId]);
+  useEffect(loadOpenOrders, [branchId]);
 
   async function handleStartShift(e: React.FormEvent) {
     e.preventDefault();
@@ -116,71 +114,27 @@ export default function PosPage() {
     }
   }
 
-  const productsInCategory = products.filter((p) => p.categoryId === activeCategoryId);
-
-  const { subtotal, discountAmount, total } = useMemo(() => {
-    const sub = cart.reduce((sum, l) => sum + l.price * l.quantity, 0);
-    if (discountType === "senior_pwd") {
-      const vatExclusive = sub / 1.12;
-      const discount = vatExclusive * 0.2;
-      return { subtotal: sub, discountAmount: discount, total: vatExclusive - discount };
-    }
-    return { subtotal: sub, discountAmount: 0, total: sub };
-  }, [cart, discountType]);
-
-  const change = tendered ? Number(tendered) - total : 0;
-
-  function addToCart(product: Product) {
-    setCart((prev) => {
-      const existing = prev.find((l) => l.productId === product.id);
-      if (existing) {
-        return prev.map((l) => (l.productId === product.id ? { ...l, quantity: l.quantity + 1 } : l));
+  async function handleNewOrder() {
+    if (creatingOrder || !branchId) return;
+    setCreatingOrder(true);
+    try {
+      const res = await fetch("/api/pos/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId, tableLabel: tableLabel || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        toast.error(body.error ?? "Something went wrong");
+        return;
       }
-      return [...prev, { productId: product.id, name: product.name, price: Number(product.price), quantity: 1 }];
-    });
-  }
-
-  function updateQuantity(productId: string, quantity: number) {
-    if (quantity <= 0) {
-      setCart((prev) => prev.filter((l) => l.productId !== productId));
-      return;
+      const order = await res.json();
+      setNewOrderModalOpen(false);
+      setTableLabel("");
+      router.push(`/pos/orders/${order.id}`);
+    } finally {
+      setCreatingOrder(false);
     }
-    setCart((prev) => prev.map((l) => (l.productId === productId ? { ...l, quantity } : l)));
-  }
-
-  async function handleCheckout() {
-    setError(null);
-
-    if (cart.length === 0) {
-      setError("Cart is empty");
-      return;
-    }
-    if (!tendered || Number(tendered) < total) {
-      setError("Tendered amount is less than the total due");
-      return;
-    }
-
-    setSubmitting(true);
-    const res = await fetch("/api/pos/sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        branchId,
-        lines: cart.map((l) => ({ productId: l.productId, quantity: l.quantity })),
-        discountType,
-        tenderedAmount: Number(tendered),
-      }),
-    });
-    setSubmitting(false);
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Something went wrong");
-      return;
-    }
-
-    const sale = await res.json();
-    router.push(`/pos/receipt/${sale.id}`);
   }
 
   return (
@@ -251,7 +205,9 @@ export default function PosPage() {
                     <span>Counted cash</span>
                     <span>₱{Number(closedSummary.countedCash).toFixed(2)}</span>
                   </div>
-                  <div className={`flex justify-between font-medium ${Number(closedSummary.cashVariance) < 0 ? "text-destructive" : Number(closedSummary.cashVariance) > 0 ? "text-warning" : "text-success"}`}>
+                  <div
+                    className={`flex justify-between font-medium ${Number(closedSummary.cashVariance) < 0 ? "text-destructive" : Number(closedSummary.cashVariance) > 0 ? "text-warning" : "text-success"}`}
+                  >
                     <span>Variance</span>
                     <span>
                       {Number(closedSummary.cashVariance) > 0 ? "+" : ""}
@@ -274,135 +230,32 @@ export default function PosPage() {
           </Card>
         </div>
       ) : (
-      <div className="flex flex-1 flex-col overflow-visible md:flex-row md:overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-visible md:overflow-hidden">
-          <div className="flex gap-2 overflow-x-auto border-b border-border bg-card px-4 py-2">
-            {categories.map((cat) => (
-              <Button
-                key={cat.id}
-                variant={activeCategoryId === cat.id ? "default" : "outline"}
-                onClick={() => setActiveCategoryId(cat.id)}
-                className="shrink-0 whitespace-nowrap"
-              >
-                {cat.name}
-              </Button>
-            ))}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Open Orders</h2>
+            <Button onClick={() => setNewOrderModalOpen(true)}>+ New Order</Button>
           </div>
-          <div className="flex-1 p-4 md:overflow-y-auto">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {productsInCategory.map((product) => (
-                <Button
-                  key={product.id}
-                  variant="outline"
-                  onClick={() => addToCart(product)}
-                  className="h-auto flex-col items-start whitespace-normal p-3 text-left"
+
+          {ordersLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : openOrders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No open orders — start one for a new table or takeout order.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {openOrders.map((order) => (
+                <button
+                  key={order.id}
+                  onClick={() => router.push(`/pos/orders/${order.id}`)}
+                  className="rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-primary"
                 >
-                  <p className="text-sm font-medium">{product.name}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {Number(product.price) > 0 ? `₱${Number(product.price).toFixed(2)}` : "No price set"}
-                  </p>
-                </Button>
+                  <p className="font-semibold text-foreground">{order.tableLabel || `Order #${order.id.slice(0, 8).toUpperCase()}`}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Opened {new Date(order.importedAt).toLocaleTimeString()}</p>
+                  <p className="mt-2 text-lg font-semibold text-foreground">₱{Number(order.totalAmount).toFixed(2)}</p>
+                </button>
               ))}
-              {productsInCategory.length === 0 && <p className="text-sm text-muted-foreground">No products in this category.</p>}
             </div>
-          </div>
+          )}
         </div>
-
-        <div className="flex w-full flex-col border-t border-border bg-card md:w-96 md:border-t-0 md:border-l">
-          <div className="flex-1 p-4 md:overflow-y-auto">
-            <h2 className="mb-3 text-sm font-semibold text-foreground">Current Order</h2>
-            {cart.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No items yet — tap a menu item to add it.</p>
-            ) : (
-              <div className="space-y-2">
-                {cart.map((line) => (
-                  <div key={line.productId} className="flex items-center justify-between text-sm">
-                    <div className="flex-1">
-                      <p className="text-foreground">{line.name}</p>
-                      <p className="text-muted-foreground">₱{line.price.toFixed(2)} each</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon-xs"
-                        onClick={() => updateQuantity(line.productId, line.quantity - 1)}
-                      >
-                        −
-                      </Button>
-                      <span className="w-6 text-center">{line.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon-xs"
-                        onClick={() => updateQuantity(line.productId, line.quantity + 1)}
-                      >
-                        +
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-border p-4">
-            <div className="mb-3 space-y-1.5">
-              <Label>Discount</Label>
-              <Select value={discountType} onValueChange={(value) => setDiscountType(value as "none" | "senior_pwd")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="senior_pwd">Senior Citizen / PWD (20%)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span>₱{subtotal.toFixed(2)}</span>
-              </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Discount</span>
-                  <span>−₱{discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-base font-semibold text-foreground">
-                <span>Total</span>
-                <span>₱{total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="mt-3 space-y-1.5">
-              <Label>Amount Tendered</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={tendered}
-                onChange={(e) => setTendered(e.target.value)}
-              />
-              {tendered && (
-                <p className={`text-sm ${change < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-                  {change < 0 ? "Insufficient tender" : `Change: ₱${change.toFixed(2)}`}
-                </p>
-              )}
-            </div>
-
-            {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-
-            <Button
-              onClick={handleCheckout}
-              disabled={submitting || !branchId}
-              className="mt-3 w-full"
-            >
-              {submitting ? "Processing…" : "Complete Sale"}
-            </Button>
-          </div>
-        </div>
-      </div>
       )}
 
       <Modal open={closeModalOpen} onClose={() => setCloseModalOpen(false)} title="Close Shift">
@@ -422,6 +275,18 @@ export default function PosPage() {
           {closeError && <p className="text-sm text-destructive">{closeError}</p>}
           <Button onClick={handleCloseShift} disabled={closingShift || !countedCash} className="w-full">
             {closingShift ? "Closing…" : "Close Shift"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal open={newOrderModalOpen} onClose={() => setNewOrderModalOpen(false)} title="New Order">
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Table / Order Label (optional)</Label>
+            <Input value={tableLabel} onChange={(e) => setTableLabel(e.target.value)} placeholder="e.g. Table 5" />
+          </div>
+          <Button onClick={handleNewOrder} disabled={creatingOrder} className="w-full">
+            {creatingOrder ? "Starting…" : "Start Order"}
           </Button>
         </div>
       </Modal>

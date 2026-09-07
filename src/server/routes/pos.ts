@@ -6,7 +6,19 @@ import { db } from "@/db/client";
 import { branches, products, users } from "@/db/schema";
 import { requireRole } from "@/server/middleware/auth";
 import { canAccessBranch, isHqScoped } from "@/server/lib/rbac";
-import { createSale, getDailySalesReport, getSalesSummary, getSaleWithItems, InsufficientStockError, listSales } from "@/server/lib/pos";
+import {
+  addItemsToOrder,
+  createOpenOrder,
+  createSale,
+  getDailySalesReport,
+  getSalesSummary,
+  getSaleWithItems,
+  InsufficientStockError,
+  listOpenOrders,
+  listSales,
+  payAndCloseOrder,
+  voidEmptyOrder,
+} from "@/server/lib/pos";
 import type { AuthVariables } from "@/server/middleware/auth";
 
 export const posRoute = new Hono<{ Variables: AuthVariables }>();
@@ -91,3 +103,127 @@ posRoute.get("/sales/:id", async (c) => {
     items: result.items.map((i) => ({ ...i, meta: productById.get(i.productId) })),
   });
 });
+
+const createOrderInput = z.object({
+  branchId: z.string().uuid(),
+  tableLabel: z.string().optional(),
+});
+
+posRoute.post(
+  "/orders",
+  requireRole("owner", "admin", "commissary_staff", "branch_manager", "branch_staff"),
+  zValidator("json", createOrderInput),
+  async (c) => {
+    const authUser = c.get("authUser");
+    const input = c.req.valid("json");
+    if (!canAccessBranch(authUser, input.branchId)) return c.json({ error: "Forbidden" }, 403);
+
+    const order = await createOpenOrder({ branchId: input.branchId, tableLabel: input.tableLabel, performedBy: authUser.id });
+    return c.json(order, 201);
+  },
+);
+
+posRoute.get("/orders", async (c) => {
+  const authUser = c.get("authUser");
+  const branchId = isHqScoped(authUser) ? (c.req.query("branchId") ?? null) : authUser.branchId;
+  if (branchId && !canAccessBranch(authUser, branchId)) return c.json({ error: "Forbidden" }, 403);
+
+  const rows = await listOpenOrders(branchId);
+  const branchRows = await db.select({ id: branches.id, name: branches.name }).from(branches);
+  const branchById = new Map(branchRows.map((b) => [b.id, b.name]));
+
+  return c.json(rows.map((r) => ({ ...r, branchName: branchById.get(r.branchId) })));
+});
+
+posRoute.get("/orders/:id", async (c) => {
+  const authUser = c.get("authUser");
+  const result = await getSaleWithItems(c.req.param("id"));
+  if (!result) return c.json({ error: "Not found" }, 404);
+  if (!canAccessBranch(authUser, result.sale.branchId)) return c.json({ error: "Forbidden" }, 403);
+
+  const productRows = await db.select({ id: products.id, name: products.name, sku: products.sku }).from(products);
+  const productById = new Map(productRows.map((p) => [p.id, p]));
+  const [branch] = await db.select({ name: branches.name }).from(branches).where(eq(branches.id, result.sale.branchId)).limit(1);
+
+  return c.json({
+    sale: { ...result.sale, branchName: branch?.name },
+    items: result.items.map((i) => ({ ...i, meta: productById.get(i.productId) })),
+  });
+});
+
+const addItemsInput = z.object({
+  lines: z.array(z.object({ productId: z.string().uuid(), quantity: z.coerce.number().positive() })).min(1),
+});
+
+posRoute.post(
+  "/orders/:id/items",
+  requireRole("owner", "admin", "commissary_staff", "branch_manager", "branch_staff"),
+  zValidator("json", addItemsInput),
+  async (c) => {
+    const authUser = c.get("authUser");
+    const id = c.req.param("id");
+    const input = c.req.valid("json");
+
+    const existing = await getSaleWithItems(id);
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (!canAccessBranch(authUser, existing.sale.branchId)) return c.json({ error: "Forbidden" }, 403);
+
+    try {
+      const order = await addItemsToOrder({ orderId: id, lines: input.lines, performedBy: authUser.id });
+      return c.json(order);
+    } catch (err) {
+      if (err instanceof InsufficientStockError) return c.json({ error: err.message }, 400);
+      if (err instanceof Error) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  },
+);
+
+const payOrderInput = z.object({
+  discountType: z.enum(["none", "senior_pwd"]).default("none"),
+  tenderedAmount: z.coerce.number().nonnegative(),
+});
+
+posRoute.post(
+  "/orders/:id/pay",
+  requireRole("owner", "admin", "commissary_staff", "branch_manager", "branch_staff"),
+  zValidator("json", payOrderInput),
+  async (c) => {
+    const authUser = c.get("authUser");
+    const id = c.req.param("id");
+    const input = c.req.valid("json");
+
+    const existing = await getSaleWithItems(id);
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (!canAccessBranch(authUser, existing.sale.branchId)) return c.json({ error: "Forbidden" }, 403);
+
+    try {
+      const order = await payAndCloseOrder({ orderId: id, discountType: input.discountType, tenderedAmount: input.tenderedAmount });
+      return c.json(order);
+    } catch (err) {
+      if (err instanceof Error) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  },
+);
+
+posRoute.post(
+  "/orders/:id/void",
+  requireRole("owner", "admin", "commissary_staff", "branch_manager", "branch_staff"),
+  async (c) => {
+    const authUser = c.get("authUser");
+    const id = c.req.param("id");
+
+    const existing = await getSaleWithItems(id);
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (!canAccessBranch(authUser, existing.sale.branchId)) return c.json({ error: "Forbidden" }, 403);
+
+    try {
+      const order = await voidEmptyOrder({ orderId: id });
+      return c.json(order);
+    } catch (err) {
+      if (err instanceof Error) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  },
+);

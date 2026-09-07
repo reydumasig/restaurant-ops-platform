@@ -3,12 +3,17 @@ import { db } from "@/db/client";
 import { branches, posSaleItems, posSales, products, rawMaterials, recipeItems, recipes } from "@/db/schema";
 import { getInventoryValueByBranch, getLowStockAlerts } from "@/server/lib/dashboard";
 
-/** [from 00:00, to 00:00 of the day AFTER `to`) — an inclusive "to" date. */
+/**
+ * [from 00:00, to 00:00 of the day AFTER `to`) — an inclusive "to" date —
+ * restricted to settled sales. An open tab's running total isn't revenue
+ * yet, so every analytics function built on this must exclude it or a
+ * still-unpaid table would inflate today's sales/profitability figures.
+ */
 function dateRangeFilter(from: string, to: string) {
   const start = new Date(`${from}T00:00:00.000Z`);
   const end = new Date(`${to}T00:00:00.000Z`);
   end.setUTCDate(end.getUTCDate() + 1);
-  return and(gte(posSales.importedAt, start), lt(posSales.importedAt, end));
+  return and(gte(posSales.importedAt, start), lt(posSales.importedAt, end), eq(posSales.status, "closed"));
 }
 
 /**
