@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PageLoading } from "@/components/page-loading";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -155,7 +157,7 @@ export default function OrderScreenPage() {
     }
   }
 
-  if (!order) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
+  if (!order) return <PageLoading />;
 
   if (order.sale.status !== "open") {
     return (
@@ -248,6 +250,7 @@ export default function OrderScreenPage() {
               </div>
               {addError && <p className="mt-2 text-sm text-destructive">{addError}</p>}
               <Button onClick={handleAddToOrder} disabled={addingItems} className="mt-3 w-full">
+                {addingItems && <Spinner />}
                 {addingItems ? "Adding…" : `Add to Order (₱${cartSubtotal.toFixed(2)})`}
               </Button>
             </div>
@@ -274,6 +277,7 @@ export default function OrderScreenPage() {
           <div className="border-t border-border p-4">
             {order.items.length === 0 ? (
               <Button variant="destructive" onClick={handleVoid} disabled={voiding} className="w-full">
+                {voiding && <Spinner />}
                 {voiding ? "Voiding…" : "Void Order"}
               </Button>
             ) : (
@@ -321,6 +325,7 @@ export default function OrderScreenPage() {
                 {payError && <p className="mt-2 text-sm text-destructive">{payError}</p>}
 
                 <Button onClick={handlePay} disabled={paying} className="mt-3 w-full">
+                  {paying && <Spinner />}
                   {paying ? "Processing…" : "Pay & Close Order"}
                 </Button>
               </>

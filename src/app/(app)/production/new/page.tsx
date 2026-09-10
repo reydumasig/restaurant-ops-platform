@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,6 +127,7 @@ export default function NewProductionRunPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" disabled={submitting || !branchId} className="w-full">
+              {submitting && <Spinner />}
               {submitting ? "Saving…" : "Record Production Run"}
             </Button>
           </form>

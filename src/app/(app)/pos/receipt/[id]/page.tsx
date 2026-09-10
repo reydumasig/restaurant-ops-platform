@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 type SaleItem = { id: string; quantity: string; unitPrice: string; subtotal: string; meta?: { name: string; sku: string } };
 type Sale = {
@@ -28,7 +29,13 @@ export default function ReceiptPage() {
       .then(setData);
   }, [params.id]);
 
-  if (!data) return <p className="p-6 text-sm text-gray-500">Loading…</p>;
+  if (!data)
+    return (
+      <div className="flex items-center justify-center gap-2 p-6 text-sm text-gray-500">
+        <Spinner className="text-gray-500" />
+        Loading…
+      </div>
+    );
 
   const { sale, items } = data;
 

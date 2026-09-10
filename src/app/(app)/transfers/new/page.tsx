@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -198,6 +199,7 @@ export default function NewTransferPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" disabled={submitting} className="w-full">
+              {submitting && <Spinner />}
               {submitting ? "Creating…" : "Dispatch Transfer"}
             </Button>
           </form>

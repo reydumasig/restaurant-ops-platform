@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageLoading } from "@/components/page-loading";
 
 type Sale = {
   id: string;
@@ -40,7 +41,7 @@ export default function ShiftDetailPage() {
       .then(setData);
   }, [params.id]);
 
-  if (!data) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
+  if (!data) return <PageLoading />;
 
   const { shift, sales } = data;
   const salesTotal = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);

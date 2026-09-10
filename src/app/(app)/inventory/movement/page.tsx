@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useBranchSelector } from "@/hooks/use-branch-selector";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -193,6 +194,7 @@ export default function StockMovementPage() {
             {success && <p className="text-sm text-success">{success}</p>}
 
             <Button type="submit" disabled={submitting || !branchId} className="w-full">
+              {submitting && <Spinner />}
               {submitting ? "Saving…" : `Record ${MODE_LABELS[mode]}`}
             </Button>
           </form>

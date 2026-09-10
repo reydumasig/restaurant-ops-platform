@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { Modal } from "@/components/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -175,6 +176,7 @@ export default function SuppliersPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={submitting} className="w-full">
+            {submitting && <Spinner />}
             {submitting ? "Saving…" : "Save"}
           </Button>
         </form>

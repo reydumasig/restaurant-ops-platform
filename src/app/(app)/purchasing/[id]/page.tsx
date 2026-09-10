@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageLoading } from "@/components/page-loading";
 
 type PoItem = {
   id: string;
@@ -74,7 +75,7 @@ export default function PurchaseOrderDetailPage() {
     load();
   }, [params.id]);
 
-  if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!data) return <PageLoading />;
 
   const { po, items } = data;
 

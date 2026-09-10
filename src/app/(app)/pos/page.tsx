@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import { PageLoading } from "@/components/page-loading";
 
 type Shift = { id: string; branchId: string; startingCash: string; status: "open" | "closed" };
 type ClosedShiftSummary = { startingCash: string; expectedCash: string; countedCash: string; cashVariance: string };
@@ -187,7 +189,7 @@ export default function PosPage() {
         </div>
       ) : shift === undefined ? (
         <div className="flex flex-1 items-center justify-center p-6">
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <PageLoading />
         </div>
       ) : shift === null ? (
         <div className="flex flex-1 items-center justify-center p-6">
@@ -240,7 +242,10 @@ export default function PosPage() {
           </div>
 
           {ordersLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Spinner />
+              Loading…
+            </p>
           ) : openOrders.length === 0 ? (
             <p className="text-sm text-muted-foreground">No open orders — start one for a new table or takeout order.</p>
           ) : (

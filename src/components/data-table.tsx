@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Spinner } from "@/components/ui/spinner";
 
 export type Column<T> = {
   header: string;
@@ -40,8 +41,11 @@ export function DataTable<T extends { id: string }>({
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="py-6 text-center text-muted-foreground">
-                Loading…
+              <TableCell colSpan={columns.length} className="py-6">
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Spinner />
+                  Loading…
+                </div>
               </TableCell>
             </TableRow>
           ) : rows.length === 0 ? (

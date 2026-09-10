@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 
 type Status = { clockedIn: boolean; since: string | null };
 type Punch = { id: string; type: "in" | "out"; reason: string | null; punchedAt: string };
@@ -84,7 +85,10 @@ export default function TimekeepingPage() {
           )}
 
           {status === null ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Spinner />
+              Loading…
+            </p>
           ) : (
             <>
               <p className="text-center text-sm text-muted-foreground">
