@@ -174,6 +174,9 @@ export default function PosPage() {
               </SelectContent>
             </Select>
           )}
+          <Link href="/faqs" className="whitespace-nowrap text-sm text-muted-foreground hover:text-foreground hover:underline">
+            FAQs
+          </Link>
           <SignOutButton />
         </div>
       </header>

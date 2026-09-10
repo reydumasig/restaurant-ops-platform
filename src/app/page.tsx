@@ -71,6 +71,9 @@ export default async function Home() {
                   <Button asChild variant="link" size="sm">
                     <Link href="/reports/inventory">Reports</Link>
                   </Button>
+                  <Button asChild variant="link" size="sm">
+                    <Link href="/faqs">FAQs</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

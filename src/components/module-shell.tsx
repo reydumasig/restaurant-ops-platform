@@ -61,6 +61,9 @@ export function ModuleShell({
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {headerActions}
+          <Link href="/faqs" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+            FAQs
+          </Link>
           <SignOutButton />
         </div>
       </header>
