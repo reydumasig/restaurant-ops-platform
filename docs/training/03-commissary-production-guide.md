@@ -2,7 +2,9 @@
 
 For: Commissary Staff (and Branch Managers/Owners overseeing the commissary).
 
-The commissary works the same as a branch for basic inventory (see **02-branch-inventory-guide.md** — Stock In/Out, Adjustments, and the Stock Ledger all work identically there). This guide covers what's specific to the commissary: **Production** and **dispatching Transfers**.
+The commissary works the same as a branch for basic inventory (see **02-branch-inventory-guide.md** — Stock In/Out, Adjustments, Waste Reports, Stock Counts, and the Stock Ledger all work identically there). This guide covers what's specific to the commissary: **Production** and **dispatching Transfers**.
+
+Most of what the commissary buys from suppliers should go through a formal **Purchase Order** rather than a plain Stock In — it records supplier price history, flags a delivery that's priced unusually high, and lets you record each item's expiry date so it's properly batch-tracked. See `07-purchasing-guide.md`.
 
 ## 1. How Recipes / BOM work
 
@@ -30,6 +32,8 @@ If there isn't enough of an ingredient in stock, the system will refuse and tell
 
 **Important distinction:** not every dish needs a Production Run. Many menu items are cooked to order — when a branch sells them through the POS, the system deducts the raw ingredients directly at that moment, with no separate production step. Use Production Runs only for things that are genuinely batch-prepared ahead of time and held as stock (a "made in advance" item), not for dishes made fresh per order.
 
+If an ingredient has multiple batches on hand with different expiry dates (from separate deliveries), the system automatically pulls from whichever expires soonest first — you don't need to specify which batch to use.
+
 ## 3. Sending stock to a branch (dispatching a Transfer)
 
 1. Go to **Transfers → New Transfer**.
@@ -45,6 +49,8 @@ Once the branch confirms receipt, the transfer is done and cannot be changed fro
 
 - Clock in on **Time Clock** at the start of your shift (see `06-time-clock-guide.md`).
 - Check **Inventory → Stock Levels** for anything flagged low-stock before starting the day's prep.
+- Check **Inventory → Expiring Soon** for anything that needs to be used or discarded before it goes bad.
 - Run Production batches for anything that needs to be pre-made.
 - Dispatch Transfers for whatever branches are due a delivery.
+- Receive any Purchase Orders that arrived (see `07-purchasing-guide.md`).
 - If anything doesn't add up, check **Inventory → Stock Ledger** — it shows every movement with a timestamp and who did it.
