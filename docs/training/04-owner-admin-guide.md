@@ -50,7 +50,7 @@ Read-only reference list — the five roles are fixed in this version (their per
 
 ## 3. Reports
 
-Under **Reports**, every report is sortable by clicking a column header, and exportable via **Export Excel** or **Print / Save PDF**.
+Under **Reports**, every report is sortable by clicking a column header, and exportable via **Export CSV** (opens fine in Excel) or **Print / Save PDF**.
 
 **Core operational reports:**
 - **Inventory & Branch Stock** — a snapshot of everything on hand, everywhere

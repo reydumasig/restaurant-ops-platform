@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { type ColumnDef, flexRender, getCoreRowModel, getSortedRowModel, type SortingState, useReactTable } from "@tanstack/react-table";
-import { exportToExcel } from "@/lib/export";
+import { exportToCsv } from "@/lib/export";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -47,9 +48,9 @@ export function ReportTable<T>({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => exportToExcel(exportFilename, exportRows(data))}
+            onClick={() => exportToCsv(exportFilename, exportRows(data))}
           >
-            Export Excel
+            Export CSV
           </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             Print / Save PDF
@@ -79,8 +80,11 @@ export function ReportTable<T>({
           <TableBody>
             {loading ? (
               <TableRow className="print:hover:bg-white">
-                <TableCell colSpan={columns.length} className="py-6 text-center text-muted-foreground">
-                  Loading…
+                <TableCell colSpan={columns.length} className="py-6">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Spinner />
+                    Loading…
+                  </div>
                 </TableCell>
               </TableRow>
             ) : table.getRowModel().rows.length === 0 ? (

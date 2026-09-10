@@ -27,4 +27,4 @@ Go to **Reports → Attendance** to see everyone's hours for your branch (Owner/
 
 Each row is one shift: employee, branch, date, clock in/out times, and hours worked. A shift shows **Incomplete** instead of a number of hours when someone clocked in but never clocked out (forgot, or a break that was never resumed) — worth following up on Incomplete rows directly with that person rather than guessing at their hours.
 
-Like the other reports, this is sortable by column and exportable via **Export Excel** or **Print / Save PDF**.
+Like the other reports, this is sortable by column and exportable via **Export CSV** or **Print / Save PDF**.
