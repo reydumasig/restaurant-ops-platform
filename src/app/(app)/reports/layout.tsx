@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/reports/aging", label: "Inventory Aging" },
   { href: "/reports/variance", label: "Stock Count Variance" },
   { href: "/reports/supplier-performance", label: "Supplier Performance" },
+  { href: "/reports/ingredient-pricing", label: "Ingredient Pricing" },
   { href: "/reports/food-cost", label: "Food Cost Analysis" },
   { href: "/reports/branch-performance", label: "Branch Performance" },
   { href: "/reports/profitability-products", label: "Product Profitability" },

@@ -156,14 +156,38 @@ export async function cancelPurchaseOrder(params: { purchaseOrderId: string; can
   });
 }
 
+/**
+ * Price history for one raw material across all suppliers, newest first,
+ * with each row's cost compared against the trailing average of the 5
+ * purchases immediately before it — the same window priceVarianceFlag()
+ * uses at receipt time, so a >10% flag here means it would have been
+ * flagged as an overpay warning when it was received.
+ */
 export async function getPriceHistory(params: { rawMaterialId: string; limit?: number }) {
   const { rawMaterialId, limit = 100 } = params;
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: supplierPriceHistory.id,
+      supplierId: supplierPriceHistory.supplierId,
+      supplierName: suppliers.name,
+      unitCost: supplierPriceHistory.unitCost,
+      purchaseOrderId: supplierPriceHistory.purchaseOrderId,
+      recordedAt: supplierPriceHistory.recordedAt,
+    })
     .from(supplierPriceHistory)
+    .innerJoin(suppliers, eq(supplierPriceHistory.supplierId, suppliers.id))
     .where(eq(supplierPriceHistory.rawMaterialId, rawMaterialId))
     .orderBy(desc(supplierPriceHistory.recordedAt))
     .limit(limit);
+
+  return rows.map((row, index) => {
+    const olderRows = rows.slice(index + 1, index + 6);
+    const trailingAverage =
+      olderRows.length > 0 ? olderRows.reduce((sum, r) => sum + Number(r.unitCost), 0) / olderRows.length : null;
+    const percentAboveAverage =
+      trailingAverage && trailingAverage > 0 ? ((Number(row.unitCost) - trailingAverage) / trailingAverage) * 100 : null;
+    return { ...row, trailingAverage, percentAboveAverage };
+  });
 }
 
 /**
