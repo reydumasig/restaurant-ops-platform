@@ -26,7 +26,8 @@ export type SharedMovementType =
   | "transfer_out"
   | "transfer_in"
   | "sale_deduction"
-  | "waste_writeoff";
+  | "waste_writeoff"
+  | "comp_writeoff";
 
 export type RawMaterialMovementType = SharedMovementType | "production_consume" | "purchase_receipt";
 export type ProductMovementType = SharedMovementType | "production_yield";

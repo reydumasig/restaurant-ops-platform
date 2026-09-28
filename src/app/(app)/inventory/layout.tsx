@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: "/inventory/movement", label: "Stock In / Out / Adjust" },
   { href: "/inventory/counts", label: "Stock Counts" },
   { href: "/inventory/waste", label: "Waste Reports" },
+  { href: "/inventory/comps", label: "Comps / Giveaways" },
   { href: "/inventory/expiring", label: "Expiring Soon" },
   { href: "/inventory/ledger", label: "Stock Ledger" },
 ];

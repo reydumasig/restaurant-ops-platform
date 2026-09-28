@@ -224,7 +224,7 @@ export const stockLedgerRawMaterials = pgTable(
     index("stock_ledger_rm_branch_item_idx").on(table.branchId, table.rawMaterialId, table.createdAt),
     check(
       "stock_ledger_rm_movement_type_check",
-      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_consume', 'sale_deduction', 'purchase_receipt', 'waste_writeoff')`,
+      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_consume', 'sale_deduction', 'purchase_receipt', 'waste_writeoff', 'comp_writeoff')`,
     ),
   ],
 );
@@ -254,7 +254,7 @@ export const stockLedgerProducts = pgTable(
     index("stock_ledger_p_branch_item_idx").on(table.branchId, table.productId, table.createdAt),
     check(
       "stock_ledger_p_movement_type_check",
-      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_yield', 'sale_deduction', 'waste_writeoff')`,
+      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_yield', 'sale_deduction', 'waste_writeoff', 'comp_writeoff')`,
     ),
   ],
 );
@@ -590,6 +590,48 @@ export const wasteReports = pgTable(
     check("waste_reports_status_check", sql`${table.status} in ('pending', 'approved', 'rejected')`),
     check(
       "waste_reports_item_ref_check",
+      sql`(${table.itemType} = 'raw_material' and ${table.rawMaterialId} is not null and ${table.productId} is null) or (${table.itemType} = 'product' and ${table.productId} is not null and ${table.rawMaterialId} is null)`,
+    ),
+  ],
+);
+
+// ============================================================
+// Ops Phase 2 — Comp / Giveaway Tracking. Same shape and approval
+// workflow as waste_reports, but for intentional give-aways (staff perks,
+// VIP comps, promo items) rather than loss — kept as its own table so
+// reports don't mix the two. See the migration file for rationale.
+// ============================================================
+
+export const compReports = pgTable(
+  "comp_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id),
+    itemType: text("item_type").notNull(),
+    rawMaterialId: uuid("raw_material_id").references(() => rawMaterials.id),
+    productId: uuid("product_id").references(() => products.id),
+    quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
+    reason: text("reason").notNull(),
+    notes: text("notes"),
+    status: text("status").notNull().default("pending"),
+    reportedBy: uuid("reported_by")
+      .notNull()
+      .references(() => users.id),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewNotes: text("review_notes"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("comp_reports_branch_id_idx").on(table.branchId, table.createdAt),
+    index("comp_reports_status_idx").on(table.status),
+    check("comp_reports_item_type_check", sql`${table.itemType} in ('raw_material', 'product')`),
+    check("comp_reports_reason_check", sql`${table.reason} in ('staff_perk', 'customer_comp', 'promo_giveaway')`),
+    check("comp_reports_status_check", sql`${table.status} in ('pending', 'approved', 'rejected')`),
+    check(
+      "comp_reports_item_ref_check",
       sql`(${table.itemType} = 'raw_material' and ${table.rawMaterialId} is not null and ${table.productId} is null) or (${table.itemType} = 'product' and ${table.productId} is not null and ${table.rawMaterialId} is null)`,
     ),
   ],
