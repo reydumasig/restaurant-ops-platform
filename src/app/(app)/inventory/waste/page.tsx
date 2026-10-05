@@ -29,7 +29,8 @@ type WasteReport = {
   createdAt: string;
 };
 
-type Item = { id: string; sku: string; name: string };
+type Item = { id: string; sku: string; name: string; unitId: string };
+type Unit = { id: string; abbreviation: string };
 
 const REASON_LABELS: Record<WasteReport["reason"], string> = { spoilage: "Spoilage", damage: "Damage", expiry: "Expiry" };
 const STATUS_VARIANTS: Record<WasteReport["status"], "warning" | "success" | "destructive"> = {
@@ -47,6 +48,7 @@ export default function WasteReportsPage() {
   const [loading, setLoading] = useState(true);
   const [rawMaterials, setRawMaterials] = useState<Item[]>([]);
   const [products, setProducts] = useState<Item[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ itemType: "raw_material" as "raw_material" | "product", itemId: "", quantity: "", reason: "spoilage" as WasteReport["reason"], notes: "" });
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +76,9 @@ export default function WasteReportsPage() {
     fetch("/api/products")
       .then((r) => r.json())
       .then(setProducts);
+    fetch("/api/units")
+      .then((r) => r.json())
+      .then(setUnits);
   }, []);
 
   function openReport() {
@@ -139,6 +144,7 @@ export default function WasteReportsPage() {
 
   const items = form.itemType === "raw_material" ? rawMaterials : products;
   const sortedItems = useMemo(() => [...items].sort((a, b) => a.name.localeCompare(b.name)), [items]);
+  const selectedUnitAbbr = units.find((u) => u.id === items.find((i) => i.id === form.itemId)?.unitId)?.abbreviation;
 
   const columns: Column<WasteReport>[] = [
     { header: "Item", cell: (r) => r.itemMeta?.name ?? "—" },
@@ -224,7 +230,7 @@ export default function WasteReportsPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Quantity</Label>
+              <Label>Quantity{selectedUnitAbbr ? ` (${selectedUnitAbbr})` : ""}</Label>
               <Input type="number" step="0.0001" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required />
             </div>
             <div className="space-y-1.5">

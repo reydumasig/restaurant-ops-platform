@@ -10,7 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type Item = { id: string; sku: string; name: string };
+type Item = { id: string; sku: string; name: string; unitId: string };
+type RawMaterialItem = Item & { purchaseUnitLabel: string | null; purchaseUnitConversionFactor: string | null };
+type Unit = { id: string; abbreviation: string };
 
 type Mode = "stock-in" | "stock-out" | "adjustment";
 
@@ -24,10 +26,12 @@ export default function StockMovementPage() {
   const { branches, branchId, setBranchId } = useBranchSelector();
   const [mode, setMode] = useState<Mode>("stock-in");
   const [itemType, setItemType] = useState<"raw_material" | "product">("raw_material");
-  const [rawMaterials, setRawMaterials] = useState<Item[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterialItem[]>([]);
   const [products, setProducts] = useState<Item[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [quantityUnitMode, setQuantityUnitMode] = useState<"tracked" | "purchase">("tracked");
   const [expiryDate, setExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +45,22 @@ export default function StockMovementPage() {
     fetch("/api/products")
       .then((r) => r.json())
       .then(setProducts);
+    fetch("/api/units")
+      .then((r) => r.json())
+      .then(setUnits);
   }, []);
 
   const items = itemType === "raw_material" ? rawMaterials : products;
   const sortedItems = useMemo(() => [...items].sort((a, b) => a.name.localeCompare(b.name)), [items]);
+  const unitById = useMemo(() => new Map(units.map((u) => [u.id, u.abbreviation])), [units]);
+  const selectedItem = items.find((i) => i.id === itemId);
+  const trackedUnitAbbr = selectedItem ? unitById.get(selectedItem.unitId) : undefined;
+  const selectedRawMaterial = itemType === "raw_material" ? (selectedItem as RawMaterialItem | undefined) : undefined;
+  const hasPurchaseUnit = !!(selectedRawMaterial?.purchaseUnitLabel && selectedRawMaterial?.purchaseUnitConversionFactor);
+  const conversionFactor = hasPurchaseUnit ? Number(selectedRawMaterial!.purchaseUnitConversionFactor) : null;
+  const effectiveUnitMode = hasPurchaseUnit ? quantityUnitMode : "tracked";
+  const convertedQuantity =
+    effectiveUnitMode === "purchase" && conversionFactor && quantity ? Number(quantity) * conversionFactor : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,15 +69,16 @@ export default function StockMovementPage() {
     setSubmitting(true);
 
     const endpoint = mode === "stock-in" ? "/api/inventory/stock-in" : mode === "stock-out" ? "/api/inventory/stock-out" : "/api/inventory/adjustment";
+    const quantityInTrackedUnit = convertedQuantity ?? Number(quantity);
 
     const body =
       mode === "adjustment"
-        ? { branchId, itemType, itemId, correctedQuantity: Number(quantity), notes: notes || undefined }
+        ? { branchId, itemType, itemId, correctedQuantity: quantityInTrackedUnit, notes: notes || undefined }
         : {
             branchId,
             itemType,
             itemId,
-            quantity: Number(quantity),
+            quantity: quantityInTrackedUnit,
             notes: notes || undefined,
             expiryDate: mode === "stock-in" && itemType === "raw_material" ? expiryDate || undefined : undefined,
           };
@@ -83,6 +100,7 @@ export default function StockMovementPage() {
     setSuccess(`${MODE_LABELS[mode]} recorded.`);
     setItemId("");
     setQuantity("");
+    setQuantityUnitMode("tracked");
     setExpiryDate("");
     setNotes("");
   }
@@ -138,6 +156,7 @@ export default function StockMovementPage() {
                 onValueChange={(value) => {
                   setItemType(value as "raw_material" | "product");
                   setItemId("");
+                  setQuantityUnitMode("tracked");
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -152,7 +171,14 @@ export default function StockMovementPage() {
 
             <div className="space-y-1.5">
               <Label>Item</Label>
-              <Select value={itemId} onValueChange={setItemId} required>
+              <Select
+                value={itemId}
+                onValueChange={(value) => {
+                  setItemId(value);
+                  setQuantityUnitMode("tracked");
+                }}
+                required
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select an item…" />
                 </SelectTrigger>
@@ -167,15 +193,37 @@ export default function StockMovementPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>{mode === "adjustment" ? "Corrected Quantity (new total on hand)" : "Quantity"}</Label>
-              <Input
-                type="number"
-                step="0.0001"
-                min="0"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                required
-              />
+              <Label>
+                {mode === "adjustment" ? "Corrected Quantity (new total on hand)" : "Quantity"}
+                {effectiveUnitMode === "tracked" && trackedUnitAbbr ? ` (${trackedUnitAbbr})` : ""}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                {hasPurchaseUnit && (
+                  <Select value={quantityUnitMode} onValueChange={(value) => setQuantityUnitMode(value as "tracked" | "purchase")}>
+                    <SelectTrigger className="w-32 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tracked">{trackedUnitAbbr}</SelectItem>
+                      <SelectItem value="purchase">{selectedRawMaterial!.purchaseUnitLabel}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              {convertedQuantity != null && (
+                <p className="text-xs text-muted-foreground">
+                  = {convertedQuantity.toLocaleString()} {trackedUnitAbbr}
+                </p>
+              )}
             </div>
 
             {mode === "stock-in" && itemType === "raw_material" && (

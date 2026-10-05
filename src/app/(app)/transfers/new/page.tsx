@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type Branch = { id: string; name: string };
-type Item = { id: string; sku: string; name: string };
+type Item = { id: string; sku: string; name: string; unitId: string };
+type Unit = { id: string; abbreviation: string };
 type Line = { itemType: "raw_material" | "product"; itemId: string; quantity: string };
 
 export default function NewTransferPage() {
@@ -24,6 +25,7 @@ export default function NewTransferPage() {
   const [toBranchId, setToBranchId] = useState("");
   const [rawMaterials, setRawMaterials] = useState<Item[]>([]);
   const [products, setProducts] = useState<Item[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [lines, setLines] = useState<Line[]>([{ itemType: "raw_material", itemId: "", quantity: "" }]);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,9 @@ export default function NewTransferPage() {
     fetch("/api/products")
       .then((r) => r.json())
       .then(setProducts);
+    fetch("/api/units")
+      .then((r) => r.json())
+      .then(setUnits);
   }, []);
 
   useEffect(() => {
@@ -147,6 +152,7 @@ export default function NewTransferPage() {
                 {lines.map((line, i) => {
                   const items = line.itemType === "raw_material" ? rawMaterials : products;
                   const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
+                  const unitAbbr = units.find((u) => u.id === items.find((it) => it.id === line.itemId)?.unitId)?.abbreviation;
                   return (
                     <div key={i} className="flex gap-2">
                       <Select
@@ -182,6 +188,7 @@ export default function NewTransferPage() {
                         onChange={(e) => updateLine(i, { quantity: e.target.value })}
                         className="w-24 shrink-0"
                       />
+                      {unitAbbr && <span className="flex items-center px-1 text-sm text-muted-foreground">{unitAbbr}</span>}
                       <Button type="button" variant="ghost" size="icon" onClick={() => removeLine(i)} className="shrink-0 text-muted-foreground hover:text-destructive">
                         ✕
                       </Button>

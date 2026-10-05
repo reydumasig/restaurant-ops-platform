@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type Supplier = { id: string; name: string };
-type RawMaterial = { id: string; sku: string; name: string };
+type RawMaterial = { id: string; sku: string; name: string; unitId: string };
+type Unit = { id: string; abbreviation: string };
 type Line = { rawMaterialId: string; quantity: string; unitCost: string };
 
 export default function NewPurchaseOrderPage() {
@@ -22,6 +23,7 @@ export default function NewPurchaseOrderPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierId, setSupplierId] = useState("");
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [lines, setLines] = useState<Line[]>([{ rawMaterialId: "", quantity: "", unitCost: "" }]);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +36,9 @@ export default function NewPurchaseOrderPage() {
     fetch("/api/raw-materials")
       .then((r) => r.json())
       .then(setRawMaterials);
+    fetch("/api/units")
+      .then((r) => r.json())
+      .then(setUnits);
   }, []);
 
   function updateLine(index: number, patch: Partial<Line>) {
@@ -85,6 +90,7 @@ export default function NewPurchaseOrderPage() {
   }
 
   const sortedRawMaterials = [...rawMaterials].sort((a, b) => a.name.localeCompare(b.name));
+  const unitById = new Map(units.map((u) => [u.id, u.abbreviation]));
 
   return (
     <div className="max-w-2xl">
@@ -138,7 +144,9 @@ export default function NewPurchaseOrderPage() {
                 </Button>
               </div>
               <div className="space-y-2">
-                {lines.map((line, i) => (
+                {lines.map((line, i) => {
+                  const unitAbbr = unitById.get(rawMaterials.find((r) => r.id === line.rawMaterialId)?.unitId ?? "");
+                  return (
                   <div key={i} className="flex gap-2">
                     <Select value={line.rawMaterialId} onValueChange={(value) => updateLine(i, { rawMaterialId: value })}>
                       <SelectTrigger className="w-0 min-w-0 flex-1">
@@ -161,6 +169,7 @@ export default function NewPurchaseOrderPage() {
                       onChange={(e) => updateLine(i, { quantity: e.target.value })}
                       className="w-24 shrink-0"
                     />
+                    {unitAbbr && <span className="flex items-center px-1 text-sm text-muted-foreground">{unitAbbr}</span>}
                     <Input
                       type="number"
                       step="0.0001"
@@ -180,7 +189,8 @@ export default function NewPurchaseOrderPage() {
                       ✕
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
