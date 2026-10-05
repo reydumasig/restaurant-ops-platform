@@ -3,8 +3,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
 import { inventoryStockRawMaterials, stockTransferItemsRawMaterials, stockTransfers } from "@/db/schema";
 import { getBatchesForItem } from "@/server/lib/batches";
-import { applyStockMovement } from "@/server/lib/inventory";
-import { cancelTransfer, confirmReceipt, createTransfer } from "@/server/lib/transfers";
+import { applyStockMovement, InsufficientStockError } from "@/server/lib/inventory";
+import { approveTransferRequest, cancelTransfer, confirmReceipt, createTransfer, rejectTransferRequest, requestTransfer } from "@/server/lib/transfers";
 import { createTestBranch, createTestRawMaterial, createTestUser } from "../helpers/fixtures";
 
 describe("stock transfers", () => {
@@ -251,5 +251,159 @@ describe("stock transfers", () => {
     const withExpiry = sourceBatches.filter((b) => b.expiryDate === "2026-11-01");
     const totalRemaining = withExpiry.reduce((sum, b) => sum + Number(b.quantityRemaining), 0);
     expect(totalRemaining).toBe(100); // 60 untouched + 40 restored, same expiry preserved throughout
+  });
+
+  describe("branch-initiated requests", () => {
+    it("records the request with no stock movement — nothing ships until approved", async () => {
+      const from = await createTestBranch("commissary");
+      const to = await createTestBranch();
+      const rice = await createTestRawMaterial();
+      await applyStockMovement({ branchId: from.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 100, performedBy });
+
+      const requested = await requestTransfer({
+        fromBranchId: from.id,
+        toBranchId: to.id,
+        requestedBy: performedBy,
+        items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+      });
+
+      expect(requested.status).toBe("pending");
+      expect(await rawMaterialStockOf(from.id, rice.id)).toBe(100); // untouched
+      const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, requested.id));
+      expect(Number(line.quantityRequested)).toBe(40);
+      expect(line.quantitySent).toBeNull();
+    });
+
+    it("approving dispatches exactly what the commissary chooses to send, which can differ from what was requested", async () => {
+      const from = await createTestBranch("commissary");
+      const to = await createTestBranch();
+      const rice = await createTestRawMaterial();
+      await applyStockMovement({ branchId: from.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 100, performedBy });
+
+      const requested = await requestTransfer({
+        fromBranchId: from.id,
+        toBranchId: to.id,
+        requestedBy: performedBy,
+        items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+      });
+      const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, requested.id));
+
+      // Commissary only has enough to send 25, not the full 40 requested.
+      const approved = await approveTransferRequest({
+        transferId: requested.id,
+        approvedBy: performedBy,
+        rawMaterialLines: [{ id: line.id, quantityToSend: 25 }],
+        productLines: [],
+      });
+
+      expect(approved.status).toBe("in_transit");
+      expect(await rawMaterialStockOf(from.id, rice.id)).toBe(75);
+      const [lineAfter] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.id, line.id));
+      expect(Number(lineAfter.quantityRequested)).toBe(40);
+      expect(Number(lineAfter.quantitySent)).toBe(25);
+    });
+
+    it("refuses to approve past what the source branch actually has", async () => {
+      const from = await createTestBranch("commissary");
+      const to = await createTestBranch();
+      const rice = await createTestRawMaterial();
+      await applyStockMovement({ branchId: from.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 10, performedBy });
+
+      const requested = await requestTransfer({
+        fromBranchId: from.id,
+        toBranchId: to.id,
+        requestedBy: performedBy,
+        items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+      });
+      const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, requested.id));
+
+      await expect(
+        approveTransferRequest({
+          transferId: requested.id,
+          approvedBy: performedBy,
+          rawMaterialLines: [{ id: line.id, quantityToSend: 40 }],
+          productLines: [],
+        }),
+      ).rejects.toThrow(InsufficientStockError);
+      expect(await rawMaterialStockOf(from.id, rice.id)).toBe(10); // unaffected by the failed approval
+    });
+
+    it("rejecting a request leaves stock untouched and never dispatches", async () => {
+      const from = await createTestBranch("commissary");
+      const to = await createTestBranch();
+      const rice = await createTestRawMaterial();
+      await applyStockMovement({ branchId: from.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 100, performedBy });
+
+      const requested = await requestTransfer({
+        fromBranchId: from.id,
+        toBranchId: to.id,
+        requestedBy: performedBy,
+        items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+      });
+
+      const rejected = await rejectTransferRequest({ transferId: requested.id, rejectedBy: performedBy });
+      expect(rejected.status).toBe("cancelled");
+      expect(await rawMaterialStockOf(from.id, rice.id)).toBe(100);
+    });
+
+    it("an approved request can then be received exactly like a pushed transfer", async () => {
+      const from = await createTestBranch("commissary");
+      const to = await createTestBranch();
+      const rice = await createTestRawMaterial();
+      await applyStockMovement({ branchId: from.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 100, performedBy });
+
+      const requested = await requestTransfer({
+        fromBranchId: from.id,
+        toBranchId: to.id,
+        requestedBy: performedBy,
+        items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+      });
+      const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, requested.id));
+      await approveTransferRequest({
+        transferId: requested.id,
+        approvedBy: performedBy,
+        rawMaterialLines: [{ id: line.id, quantityToSend: 40 }],
+        productLines: [],
+      });
+
+      const received = await confirmReceipt({
+        transferId: requested.id,
+        receivedBy: performedBy,
+        rawMaterialReceipts: [{ id: line.id, quantityReceived: 40 }],
+        productReceipts: [],
+      });
+
+      expect(received.status).toBe("received");
+      expect(await rawMaterialStockOf(to.id, rice.id)).toBe(40);
+    });
+
+    it("refuses to approve or reject a request twice", async () => {
+      const from = await createTestBranch("commissary");
+      const to = await createTestBranch();
+      const rice = await createTestRawMaterial();
+      await applyStockMovement({ branchId: from.id, itemType: "raw_material", itemId: rice.id, movementType: "stock_in", quantityDelta: 100, performedBy });
+
+      const requested = await requestTransfer({
+        fromBranchId: from.id,
+        toBranchId: to.id,
+        requestedBy: performedBy,
+        items: [{ itemType: "raw_material", itemId: rice.id, quantity: 40 }],
+      });
+      const [line] = await db.select().from(stockTransferItemsRawMaterials).where(eq(stockTransferItemsRawMaterials.transferId, requested.id));
+
+      await approveTransferRequest({
+        transferId: requested.id,
+        approvedBy: performedBy,
+        rawMaterialLines: [{ id: line.id, quantityToSend: 40 }],
+        productLines: [],
+      });
+
+      await expect(
+        approveTransferRequest({ transferId: requested.id, approvedBy: performedBy, rawMaterialLines: [], productLines: [] }),
+      ).rejects.toThrow("Transfer is already in_transit");
+      await expect(rejectTransferRequest({ transferId: requested.id, rejectedBy: performedBy })).rejects.toThrow(
+        "Transfer is already in_transit",
+      );
+    });
   });
 });

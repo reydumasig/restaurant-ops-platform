@@ -7,14 +7,23 @@ import { branches, products, rawMaterials, users } from "@/db/schema";
 import { requireRole } from "@/server/middleware/auth";
 import { canAccessBranch, isHqScoped } from "@/server/lib/rbac";
 import { InsufficientStockError } from "@/server/lib/inventory";
-import { cancelTransfer, confirmReceipt, createTransfer, getTransferWithItems, listTransfers } from "@/server/lib/transfers";
+import {
+  approveTransferRequest,
+  cancelTransfer,
+  confirmReceipt,
+  createTransfer,
+  getTransferWithItems,
+  listTransfers,
+  rejectTransferRequest,
+  requestTransfer,
+} from "@/server/lib/transfers";
 import type { AuthVariables } from "@/server/middleware/auth";
 
 export const transfersRoute = new Hono<{ Variables: AuthVariables }>();
 
-async function enrichTransfers<T extends { fromBranchId: string; toBranchId: string; createdBy: string; receivedBy: string | null }>(
-  rows: T[],
-) {
+async function enrichTransfers<
+  T extends { fromBranchId: string; toBranchId: string; createdBy: string; approvedBy: string | null; receivedBy: string | null },
+>(rows: T[]) {
   const branchRows = await db.select({ id: branches.id, name: branches.name }).from(branches);
   const branchById = new Map(branchRows.map((b) => [b.id, b.name]));
   const userRows = await db.select({ id: users.id, fullName: users.fullName }).from(users);
@@ -25,6 +34,7 @@ async function enrichTransfers<T extends { fromBranchId: string; toBranchId: str
     fromBranchName: branchById.get(r.fromBranchId),
     toBranchName: branchById.get(r.toBranchId),
     createdByName: userById.get(r.createdBy),
+    approvedByName: r.approvedBy ? userById.get(r.approvedBy) : null,
     receivedByName: r.receivedBy ? userById.get(r.receivedBy) : null,
   }));
 }
@@ -98,6 +108,81 @@ transfersRoute.post(
     }
   },
 );
+
+transfersRoute.post(
+  "/request",
+  requireRole("owner", "admin", "commissary_staff", "branch_manager", "branch_staff"),
+  zValidator("json", createInput),
+  async (c) => {
+    const authUser = c.get("authUser");
+    const input = c.req.valid("json");
+
+    if (input.fromBranchId === input.toBranchId) return c.json({ error: "Source and destination branch must differ" }, 400);
+    // Requesting FOR your own branch — you don't need access to the source, just the destination you're asking stock into.
+    if (!canAccessBranch(authUser, input.toBranchId)) return c.json({ error: "Forbidden" }, 403);
+
+    const transfer = await requestTransfer({
+      fromBranchId: input.fromBranchId,
+      toBranchId: input.toBranchId,
+      requestedBy: authUser.id,
+      items: input.items,
+      notes: input.notes,
+    });
+    return c.json(transfer, 201);
+  },
+);
+
+const approvalLineInput = z.object({ id: z.string().uuid(), quantityToSend: z.coerce.number().nonnegative() });
+const approveInput = z.object({
+  rawMaterialLines: z.array(approvalLineInput),
+  productLines: z.array(approvalLineInput),
+});
+
+transfersRoute.post(
+  "/:id/approve",
+  requireRole("owner", "admin", "commissary_staff"),
+  zValidator("json", approveInput),
+  async (c) => {
+    const authUser = c.get("authUser");
+    const transferId = c.req.param("id");
+    const input = c.req.valid("json");
+
+    const existing = await getTransferWithItems(transferId);
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (!canAccessBranch(authUser, existing.transfer.fromBranchId)) return c.json({ error: "Forbidden" }, 403);
+
+    try {
+      const updated = await approveTransferRequest({
+        transferId,
+        approvedBy: authUser.id,
+        rawMaterialLines: input.rawMaterialLines,
+        productLines: input.productLines,
+      });
+      return c.json(updated);
+    } catch (err) {
+      if (err instanceof InsufficientStockError) return c.json({ error: err.message }, 400);
+      if (err instanceof Error) return c.json({ error: err.message }, 400);
+      throw err;
+    }
+  },
+);
+
+transfersRoute.post("/:id/reject", requireRole("owner", "admin", "commissary_staff"), async (c) => {
+  const authUser = c.get("authUser");
+  const transferId = c.req.param("id");
+
+  const existing = await getTransferWithItems(transferId);
+  if (!existing) return c.json({ error: "Not found" }, 404);
+  if (!canAccessBranch(authUser, existing.transfer.fromBranchId)) return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const updated = await rejectTransferRequest({ transferId, rejectedBy: authUser.id });
+    return c.json(updated);
+  } catch (err) {
+    if (err instanceof Error) return c.json({ error: err.message }, 400);
+    throw err;
+  }
+});
 
 const receiveInput = z.object({
   rawMaterialReceipts: z.array(z.object({ id: z.string().uuid(), quantityReceived: z.coerce.number().nonnegative() })),

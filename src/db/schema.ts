@@ -281,6 +281,8 @@ export const stockTransfers = pgTable(
       .notNull()
       .references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    approvedBy: uuid("approved_by").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
     receivedBy: uuid("received_by").references(() => users.id),
     receivedAt: timestamp("received_at", { withTimezone: true }),
     notes: text("notes"),
@@ -303,7 +305,8 @@ export const stockTransferItemsRawMaterials = pgTable(
     rawMaterialId: uuid("raw_material_id")
       .notNull()
       .references(() => rawMaterials.id),
-    quantitySent: numeric("quantity_sent", { precision: 14, scale: 4 }).notNull(),
+    quantityRequested: numeric("quantity_requested", { precision: 14, scale: 4 }).notNull(),
+    quantitySent: numeric("quantity_sent", { precision: 14, scale: 4 }),
     quantityReceived: numeric("quantity_received", { precision: 14, scale: 4 }),
   },
   (table) => [uniqueIndex("stock_transfer_items_rm_transfer_item_key").on(table.transferId, table.rawMaterialId)],
@@ -319,7 +322,8 @@ export const stockTransferItemsProducts = pgTable(
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id),
-    quantitySent: numeric("quantity_sent", { precision: 14, scale: 4 }).notNull(),
+    quantityRequested: numeric("quantity_requested", { precision: 14, scale: 4 }).notNull(),
+    quantitySent: numeric("quantity_sent", { precision: 14, scale: 4 }),
     quantityReceived: numeric("quantity_received", { precision: 14, scale: 4 }),
   },
   (table) => [uniqueIndex("stock_transfer_items_p_transfer_item_key").on(table.transferId, table.productId)],

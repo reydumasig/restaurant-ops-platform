@@ -7,10 +7,16 @@ export default function TransfersLayout({ children }: { children: ReactNode }) {
   return (
     <ModuleShell
       moduleLabel="Stock Transfers"
+      printable
       headerActions={
-        <Button asChild>
-          <Link href="/transfers/new">New Transfer</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/transfers/request">Request Stock</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/transfers/new">New Transfer</Link>
+          </Button>
+        </div>
       }
     >
       {children}

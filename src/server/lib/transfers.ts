@@ -84,12 +84,14 @@ export async function createTransfer(params: {
         await tx.insert(stockTransferItemsRawMaterials).values({
           transferId: transfer.id,
           rawMaterialId: item.itemId,
+          quantityRequested: String(item.quantity),
           quantitySent: String(item.quantity),
         });
       } else {
         await tx.insert(stockTransferItemsProducts).values({
           transferId: transfer.id,
           productId: item.itemId,
+          quantityRequested: String(item.quantity),
           quantitySent: String(item.quantity),
         });
       }
@@ -110,6 +112,164 @@ export async function createTransfer(params: {
     }
 
     return transfer;
+  });
+}
+
+/**
+ * Branch-initiated request: records what a branch is asking for, with no
+ * stock movement yet — the request just sits `pending` until the source
+ * branch (commissary) approves it via `approveTransferRequest`, which is
+ * the point stock actually leaves the source. `quantitySent` stays null
+ * until then.
+ */
+export async function requestTransfer(params: {
+  fromBranchId: string;
+  toBranchId: string;
+  requestedBy: string;
+  items: TransferLineInput[];
+  notes?: string;
+}) {
+  const { fromBranchId, toBranchId, requestedBy, items, notes } = params;
+  if (items.length === 0) throw new Error("A request needs at least one item");
+
+  return db.transaction(async (tx) => {
+    const [transfer] = await tx
+      .insert(stockTransfers)
+      .values({
+        transferNo: generateTransferNo(),
+        fromBranchId,
+        toBranchId,
+        status: "pending",
+        createdBy: requestedBy,
+        notes,
+      })
+      .returning();
+
+    for (const item of items) {
+      if (item.itemType === "raw_material") {
+        await tx.insert(stockTransferItemsRawMaterials).values({
+          transferId: transfer.id,
+          rawMaterialId: item.itemId,
+          quantityRequested: String(item.quantity),
+        });
+      } else {
+        await tx.insert(stockTransferItemsProducts).values({
+          transferId: transfer.id,
+          productId: item.itemId,
+          quantityRequested: String(item.quantity),
+        });
+      }
+    }
+
+    return transfer;
+  });
+}
+
+export type TransferApprovalLine = { id: string; quantityToSend: number };
+
+/**
+ * The commissary accepts a pending request: picks how much of each line to
+ * actually send (defaults to what was requested, but can be adjusted down
+ * if they don't have enough — applyStockMovement still refuses to go
+ * negative either way) and dispatches it, same stock-movement shape as
+ * createTransfer's immediate push.
+ */
+export async function approveTransferRequest(params: {
+  transferId: string;
+  approvedBy: string;
+  rawMaterialLines: TransferApprovalLine[];
+  productLines: TransferApprovalLine[];
+}) {
+  const { transferId, approvedBy, rawMaterialLines, productLines } = params;
+
+  return db.transaction(async (tx) => {
+    const [transfer] = await tx.select().from(stockTransfers).where(eq(stockTransfers.id, transferId)).limit(1);
+    if (!transfer) throw new Error("Transfer not found");
+    if (transfer.status !== "pending") throw new Error(`Transfer is already ${transfer.status}`);
+
+    for (const approval of rawMaterialLines) {
+      if (approval.quantityToSend <= 0) continue;
+      const [line] = await tx
+        .select()
+        .from(stockTransferItemsRawMaterials)
+        .where(eq(stockTransferItemsRawMaterials.id, approval.id))
+        .limit(1);
+      if (!line) throw new Error("Transfer line not found");
+
+      await tx
+        .update(stockTransferItemsRawMaterials)
+        .set({ quantitySent: String(approval.quantityToSend) })
+        .where(eq(stockTransferItemsRawMaterials.id, approval.id));
+
+      await applyStockMovement(
+        {
+          branchId: transfer.fromBranchId,
+          itemType: "raw_material",
+          itemId: line.rawMaterialId,
+          movementType: "transfer_out",
+          quantityDelta: -approval.quantityToSend,
+          performedBy: approvedBy,
+          referenceType: "stock_transfer",
+          referenceId: transfer.id,
+        },
+        tx,
+      );
+    }
+
+    for (const approval of productLines) {
+      if (approval.quantityToSend <= 0) continue;
+      const [line] = await tx.select().from(stockTransferItemsProducts).where(eq(stockTransferItemsProducts.id, approval.id)).limit(1);
+      if (!line) throw new Error("Transfer line not found");
+
+      await tx
+        .update(stockTransferItemsProducts)
+        .set({ quantitySent: String(approval.quantityToSend) })
+        .where(eq(stockTransferItemsProducts.id, approval.id));
+
+      await applyStockMovement(
+        {
+          branchId: transfer.fromBranchId,
+          itemType: "product",
+          itemId: line.productId,
+          movementType: "transfer_out",
+          quantityDelta: -approval.quantityToSend,
+          performedBy: approvedBy,
+          referenceType: "stock_transfer",
+          referenceId: transfer.id,
+        },
+        tx,
+      );
+    }
+
+    const [updated] = await tx
+      .update(stockTransfers)
+      .set({ status: "in_transit", approvedBy, approvedAt: new Date() })
+      .where(eq(stockTransfers.id, transferId))
+      .returning();
+
+    return updated;
+  });
+}
+
+/**
+ * Declines a pending request outright — nothing was ever dispatched, so
+ * unlike cancelTransfer there's no stock movement to reverse.
+ */
+export async function rejectTransferRequest(params: { transferId: string; rejectedBy: string }) {
+  const { transferId, rejectedBy } = params;
+
+  return db.transaction(async (tx) => {
+    const [transfer] = await tx.select().from(stockTransfers).where(eq(stockTransfers.id, transferId)).limit(1);
+    if (!transfer) throw new Error("Transfer not found");
+    if (transfer.status !== "pending") throw new Error(`Transfer is already ${transfer.status}`);
+
+    const [updated] = await tx
+      .update(stockTransfers)
+      .set({ status: "cancelled", approvedBy: rejectedBy, approvedAt: new Date() })
+      .where(eq(stockTransfers.id, transferId))
+      .returning();
+
+    return updated;
   });
 }
 
