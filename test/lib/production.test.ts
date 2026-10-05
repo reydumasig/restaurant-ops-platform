@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db/client";
-import { inventoryStockProducts, inventoryStockRawMaterials, productionRuns } from "@/db/schema";
+import { inventoryStockProducts, inventoryStockRawMaterials, productionRuns, stockLedgerRawMaterials } from "@/db/schema";
 import { getBatchesForItem } from "@/server/lib/batches";
 import { applyStockMovement, InsufficientStockError } from "@/server/lib/inventory";
 import { runProduction } from "@/server/lib/production";
@@ -94,5 +94,55 @@ describe("runProduction", () => {
 
     const runsForRecipe = await db.select().from(productionRuns).where(eq(productionRuns.recipeId, recipe.id));
     expect(runsForRecipe).toHaveLength(0);
+  });
+
+  it("supports a recipe that outputs a raw material instead of a product (e.g. marinating raw fish into a semi-finished component)", async () => {
+    const branch = await createTestBranch("commissary");
+    const rawFish = await createTestRawMaterial({ costPerUnit: 1 });
+    const marinade = await createTestRawMaterial({ costPerUnit: 0.5 });
+    const marinatedFish = await createTestRawMaterial({ costPerUnit: 0 });
+
+    // Recipe yields 10 pc of marinated fish from 5000g raw fish + 500g marinade.
+    const recipe = await createTestRecipe({
+      outputRawMaterialId: marinatedFish.id,
+      yieldQuantity: 10,
+      items: [
+        { rawMaterialId: rawFish.id, quantity: 5000 },
+        { rawMaterialId: marinade.id, quantity: 500 },
+      ],
+    });
+
+    await applyStockMovement({ branchId: branch.id, itemType: "raw_material", itemId: rawFish.id, movementType: "stock_in", quantityDelta: 10000, performedBy });
+    await applyStockMovement({ branchId: branch.id, itemType: "raw_material", itemId: marinade.id, movementType: "stock_in", quantityDelta: 1000, performedBy });
+
+    const run = await runProduction({
+      recipeId: recipe.id,
+      branchId: branch.id,
+      quantityProduced: 10,
+      performedBy,
+      batchExpiryDate: "2026-12-31",
+    });
+
+    expect(await rawMaterialStockOf(branch.id, rawFish.id)).toBe(10000 - 5000);
+    expect(await rawMaterialStockOf(branch.id, marinade.id)).toBe(1000 - 500);
+    expect(await rawMaterialStockOf(branch.id, marinatedFish.id)).toBe(10);
+
+    const [ledgerRow] = await db
+      .select()
+      .from(stockLedgerRawMaterials)
+      .where(
+        and(
+          eq(stockLedgerRawMaterials.branchId, branch.id),
+          eq(stockLedgerRawMaterials.rawMaterialId, marinatedFish.id),
+          eq(stockLedgerRawMaterials.movementType, "production_yield"),
+        ),
+      );
+    expect(ledgerRow).toBeDefined();
+    expect(Number(ledgerRow.quantityDelta)).toBe(10);
+    expect(ledgerRow.referenceId).toBe(run.id);
+
+    // The yield batch picked up the expiry date passed in, same as a stock-in would.
+    const [batch] = await getBatchesForItem({ branchId: branch.id, rawMaterialId: marinatedFish.id });
+    expect(batch.expiryDate).toBe("2026-12-31");
   });
 });

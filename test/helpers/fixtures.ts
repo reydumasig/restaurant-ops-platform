@@ -96,7 +96,8 @@ export async function createTestProduct(opts: { unitAbbrev?: string; price?: num
 }
 
 export async function createTestRecipe(params: {
-  productId: string;
+  productId?: string;
+  outputRawMaterialId?: string;
   yieldQuantity: number;
   yieldUnitAbbrev?: string;
   items: Array<{ rawMaterialId: string; quantity: number; unitAbbrev?: string }>;
@@ -106,6 +107,7 @@ export async function createTestRecipe(params: {
     .insert(recipes)
     .values({
       productId: params.productId,
+      outputRawMaterialId: params.outputRawMaterialId,
       name: `Test Recipe ${uniqueSuffix()}`,
       yieldQuantity: String(params.yieldQuantity),
       yieldUnitId,

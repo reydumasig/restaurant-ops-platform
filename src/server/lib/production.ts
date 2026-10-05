@@ -9,8 +9,10 @@ export async function runProduction(params: {
   quantityProduced: number;
   performedBy: string;
   notes?: string;
+  /** Raw-material-output recipes only: expiry date for the batch this run creates. */
+  batchExpiryDate?: string | null;
 }) {
-  const { recipeId, branchId, quantityProduced, performedBy, notes } = params;
+  const { recipeId, branchId, quantityProduced, performedBy, notes, batchExpiryDate } = params;
 
   const [recipe] = await db.select().from(recipes).where(eq(recipes.id, recipeId)).limit(1);
   if (!recipe) throw new Error("Recipe not found");
@@ -49,19 +51,36 @@ export async function runProduction(params: {
       );
     }
 
-    await applyStockMovement(
-      {
-        branchId,
-        itemType: "product",
-        itemId: recipe.productId,
-        movementType: "production_yield",
-        quantityDelta: quantityProduced,
-        performedBy,
-        referenceType: "production_run",
-        referenceId: run.id,
-      },
-      tx,
-    );
+    if (recipe.outputRawMaterialId) {
+      await applyStockMovement(
+        {
+          branchId,
+          itemType: "raw_material",
+          itemId: recipe.outputRawMaterialId,
+          movementType: "production_yield",
+          quantityDelta: quantityProduced,
+          performedBy,
+          referenceType: "production_run",
+          referenceId: run.id,
+          batchExpiryDate,
+        },
+        tx,
+      );
+    } else {
+      await applyStockMovement(
+        {
+          branchId,
+          itemType: "product",
+          itemId: recipe.productId!,
+          movementType: "production_yield",
+          quantityDelta: quantityProduced,
+          performedBy,
+          referenceType: "production_run",
+          referenceId: run.id,
+        },
+        tx,
+      );
+    }
 
     return run;
   });

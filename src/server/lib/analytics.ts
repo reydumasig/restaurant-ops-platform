@@ -50,7 +50,9 @@ export async function getFoodCostAnalysis() {
 
   for (const row of rows) {
     const entry = byRecipe.get(row.recipeId) ?? {
-      productId: row.productId,
+      // Inner-joined to products, so a row's productId is never null here —
+      // raw-material-output recipes (no matching product) never appear.
+      productId: row.productId!,
       productName: row.productName,
       productSku: row.productSku,
       price: Number(row.price),

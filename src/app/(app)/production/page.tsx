@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 type Run = {
   id: string;
   recipeName?: string;
-  productName?: string;
+  outputName?: string;
   quantityProduced: string;
   producedByName?: string;
   producedAt: string;
@@ -30,7 +30,7 @@ export default function ProductionRunsPage() {
 
   const columns: Column<Run>[] = [
     { header: "Recipe", cell: (r) => r.recipeName ?? "—" },
-    { header: "Produced", cell: (r) => `${r.quantityProduced} of ${r.productName ?? "—"}` },
+    { header: "Produced", cell: (r) => `${r.quantityProduced} of ${r.outputName ?? "—"}` },
     { header: "By", cell: (r) => r.producedByName ?? "—" },
     { header: "When", cell: (r) => new Date(r.producedAt).toLocaleString() },
     { header: "Notes", cell: (r) => r.notes ?? "—" },

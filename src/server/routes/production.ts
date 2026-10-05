@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { products, recipes, users } from "@/db/schema";
+import { products, rawMaterials, recipes, users } from "@/db/schema";
 import { requireRole } from "@/server/middleware/auth";
 import { canAccessBranch, isHqScoped } from "@/server/lib/rbac";
 import { InsufficientStockError } from "@/server/lib/inventory";
@@ -17,21 +17,29 @@ productionRoute.get("/runs", async (c) => {
   const rows = await listProductionRuns(branchId);
 
   const recipeRows = await db
-    .select({ id: recipes.id, name: recipes.name, productId: recipes.productId })
+    .select({ id: recipes.id, name: recipes.name, productId: recipes.productId, outputRawMaterialId: recipes.outputRawMaterialId })
     .from(recipes);
   const recipeById = new Map(recipeRows.map((r) => [r.id, r]));
   const productRows = await db.select({ id: products.id, name: products.name }).from(products);
   const productById = new Map(productRows.map((p) => [p.id, p.name]));
+  const rawMaterialRows = await db.select({ id: rawMaterials.id, name: rawMaterials.name }).from(rawMaterials);
+  const rawMaterialById = new Map(rawMaterialRows.map((r) => [r.id, r.name]));
   const userRows = await db.select({ id: users.id, fullName: users.fullName }).from(users);
   const userById = new Map(userRows.map((u) => [u.id, u.fullName]));
 
   return c.json(
-    rows.map((r) => ({
-      ...r,
-      recipeName: recipeById.get(r.recipeId)?.name,
-      productName: productById.get(recipeById.get(r.recipeId)?.productId ?? ""),
-      producedByName: userById.get(r.producedBy),
-    })),
+    rows.map((r) => {
+      const recipe = recipeById.get(r.recipeId);
+      const outputName = recipe?.outputRawMaterialId
+        ? rawMaterialById.get(recipe.outputRawMaterialId)
+        : productById.get(recipe?.productId ?? "");
+      return {
+        ...r,
+        recipeName: recipe?.name,
+        outputName,
+        producedByName: userById.get(r.producedBy),
+      };
+    }),
   );
 });
 
@@ -40,6 +48,7 @@ const runInput = z.object({
   branchId: z.string().uuid(),
   quantityProduced: z.coerce.number().positive(),
   notes: z.string().optional(),
+  batchExpiryDate: z.string().optional(),
 });
 
 productionRoute.post(
@@ -58,6 +67,7 @@ productionRoute.post(
         quantityProduced: input.quantityProduced,
         performedBy: authUser.id,
         notes: input.notes,
+        batchExpiryDate: input.batchExpiryDate,
       });
       return c.json(run, 201);
     } catch (err) {

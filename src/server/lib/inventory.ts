@@ -27,10 +27,11 @@ export type SharedMovementType =
   | "transfer_in"
   | "sale_deduction"
   | "waste_writeoff"
-  | "comp_writeoff";
+  | "comp_writeoff"
+  | "production_yield";
 
 export type RawMaterialMovementType = SharedMovementType | "production_consume" | "purchase_receipt";
-export type ProductMovementType = SharedMovementType | "production_yield";
+export type ProductMovementType = SharedMovementType;
 
 class InsufficientStockError extends Error {
   constructor() {
@@ -46,6 +47,7 @@ function inferBatchSourceType(movementType: string): BatchSourceType {
     case "purchase_receipt":
     case "transfer_in":
     case "adjustment_increase":
+    case "production_yield":
       return movementType;
     default:
       throw new Error(`Movement type "${movementType}" has no batch source mapping for a stock increase`);

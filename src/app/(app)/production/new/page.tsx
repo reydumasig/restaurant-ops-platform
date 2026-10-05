@@ -11,16 +11,26 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type Recipe = { id: string; name: string; productId: string; yieldQuantity: string; active: boolean };
+type Recipe = {
+  id: string;
+  name: string;
+  productId: string | null;
+  outputRawMaterialId: string | null;
+  yieldQuantity: string;
+  active: boolean;
+};
 type Product = { id: string; name: string };
+type RawMaterial = { id: string; name: string };
 
 export default function NewProductionRunPage() {
   const router = useRouter();
   const { branches, branchId, setBranchId } = useBranchSelector();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [recipeId, setRecipeId] = useState("");
   const [quantityProduced, setQuantityProduced] = useState("");
+  const [batchExpiryDate, setBatchExpiryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,9 +42,13 @@ export default function NewProductionRunPage() {
     fetch("/api/products")
       .then((r) => r.json())
       .then(setProducts);
+    fetch("/api/raw-materials")
+      .then((r) => r.json())
+      .then(setRawMaterials);
   }, []);
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p.name])), [products]);
+  const rawMaterialById = useMemo(() => new Map(rawMaterials.map((r) => [r.id, r.name])), [rawMaterials]);
   const selectedRecipe = recipes.find((r) => r.id === recipeId);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,7 +59,13 @@ export default function NewProductionRunPage() {
     const res = await fetch("/api/production/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipeId, branchId, quantityProduced: Number(quantityProduced), notes: notes || undefined }),
+      body: JSON.stringify({
+        recipeId,
+        branchId,
+        quantityProduced: Number(quantityProduced),
+        notes: notes || undefined,
+        batchExpiryDate: selectedRecipe?.outputRawMaterialId ? batchExpiryDate || undefined : undefined,
+      }),
     });
     setSubmitting(false);
 
@@ -94,7 +114,7 @@ export default function NewProductionRunPage() {
                 <SelectContent>
                   {recipes.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      {r.name} — produces {productById.get(r.productId) ?? "?"}
+                      {r.name} — produces {(r.outputRawMaterialId ? rawMaterialById.get(r.outputRawMaterialId) : productById.get(r.productId ?? "")) ?? "?"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -118,6 +138,13 @@ export default function NewProductionRunPage() {
                 required
               />
             </div>
+
+            {selectedRecipe?.outputRawMaterialId && (
+              <div className="space-y-1.5">
+                <Label>Expiry Date (optional)</Label>
+                <Input type="date" value={batchExpiryDate} onChange={(e) => setBatchExpiryDate(e.target.value)} />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>Notes (optional)</Label>

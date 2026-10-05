@@ -3,7 +3,7 @@ import { db } from "@/db/client";
 import { rawMaterialBatchAllocations, rawMaterialBatches } from "@/db/schema";
 import type { DbExecutor } from "@/server/lib/inventory";
 
-export type BatchSourceType = "stock_in" | "purchase_receipt" | "transfer_in" | "adjustment_increase" | "legacy_balance";
+export type BatchSourceType = "stock_in" | "purchase_receipt" | "transfer_in" | "adjustment_increase" | "legacy_balance" | "production_yield";
 
 function generateBatchNumber() {
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);

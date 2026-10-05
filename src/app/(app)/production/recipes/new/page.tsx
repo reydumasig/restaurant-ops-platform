@@ -13,6 +13,7 @@ type Product = { id: string; sku: string; name: string };
 type RawMaterial = { id: string; sku: string; name: string; unitId: string };
 type Unit = { id: string; name: string; abbreviation: string };
 type Line = { rawMaterialId: string; quantity: string; unitId: string };
+type OutputType = "product" | "raw_material";
 
 export default function NewRecipePage() {
   const router = useRouter();
@@ -20,7 +21,9 @@ export default function NewRecipePage() {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [name, setName] = useState("");
+  const [outputType, setOutputType] = useState<OutputType>("product");
   const [productId, setProductId] = useState("");
+  const [outputRawMaterialId, setOutputRawMaterialId] = useState("");
   const [yieldQuantity, setYieldQuantity] = useState("1");
   const [yieldUnitId, setYieldUnitId] = useState("");
   const [lines, setLines] = useState<Line[]>([{ rawMaterialId: "", quantity: "", unitId: "" }]);
@@ -79,7 +82,14 @@ export default function NewRecipePage() {
     const res = await fetch("/api/recipes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, productId, yieldQuantity: Number(yieldQuantity), yieldUnitId, items }),
+      body: JSON.stringify({
+        name,
+        productId: outputType === "product" ? productId : undefined,
+        outputRawMaterialId: outputType === "raw_material" ? outputRawMaterialId : undefined,
+        yieldQuantity: Number(yieldQuantity),
+        yieldUnitId,
+        items,
+      }),
     });
     setSubmitting(false);
 
@@ -113,20 +123,63 @@ export default function NewRecipePage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Produces (Product)</Label>
-              <Select value={productId} onValueChange={setProductId} required>
+              <Label>Produces</Label>
+              <Select
+                value={outputType}
+                onValueChange={(value) => {
+                  setOutputType(value as OutputType);
+                  setProductId("");
+                  setOutputRawMaterialId("");
+                }}
+              >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product…" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortedProducts.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} ({p.sku})
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="product">A Product (sold directly, e.g. a menu dish)</SelectItem>
+                  <SelectItem value="raw_material">A Raw Material (a semi-finished component used inside other recipes)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {outputType === "product" ? (
+              <div className="space-y-1.5">
+                <Label>Product</Label>
+                <Select value={productId} onValueChange={setProductId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select product…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedProducts.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} ({p.sku})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Raw Material</Label>
+                <Select value={outputRawMaterialId} onValueChange={setOutputRawMaterialId} required>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select raw material…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortedRawMaterials.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name} ({r.sku})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Choose the already-existing raw material this recipe produces — e.g. "CLQ (Marinated Chicken Leg Quarter)" if this
+                  recipe marinates raw chicken. Production runs against this recipe will deduct the ingredients below and add to this
+                  raw material's stock instead of a product's.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">

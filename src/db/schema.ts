@@ -127,9 +127,8 @@ export const recipes = pgTable(
   "recipes",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    productId: uuid("product_id")
-      .notNull()
-      .references(() => products.id),
+    productId: uuid("product_id").references(() => products.id),
+    outputRawMaterialId: uuid("output_raw_material_id").references(() => rawMaterials.id),
     name: text("name").notNull(),
     yieldQuantity: numeric("yield_quantity", { precision: 14, scale: 4 }).notNull(),
     yieldUnitId: uuid("yield_unit_id")
@@ -139,7 +138,14 @@ export const recipes = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("recipes_product_id_idx").on(table.productId)],
+  (table) => [
+    index("recipes_product_id_idx").on(table.productId),
+    index("recipes_output_raw_material_id_idx").on(table.outputRawMaterialId),
+    check(
+      "recipes_output_ref_check",
+      sql`(${table.productId} is not null and ${table.outputRawMaterialId} is null) or (${table.productId} is null and ${table.outputRawMaterialId} is not null)`,
+    ),
+  ],
 );
 
 export const recipeItems = pgTable(
@@ -224,7 +230,7 @@ export const stockLedgerRawMaterials = pgTable(
     index("stock_ledger_rm_branch_item_idx").on(table.branchId, table.rawMaterialId, table.createdAt),
     check(
       "stock_ledger_rm_movement_type_check",
-      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_consume', 'sale_deduction', 'purchase_receipt', 'waste_writeoff', 'comp_writeoff')`,
+      sql`${table.movementType} in ('stock_in', 'stock_out', 'adjustment_increase', 'adjustment_decrease', 'transfer_out', 'transfer_in', 'production_consume', 'sale_deduction', 'purchase_receipt', 'waste_writeoff', 'comp_writeoff', 'production_yield')`,
     ),
   ],
 );
@@ -718,7 +724,7 @@ export const rawMaterialBatches = pgTable(
     index("raw_material_batches_fefo_idx").on(table.branchId, table.rawMaterialId, table.expiryDate, table.receivedDate),
     check(
       "raw_material_batches_source_type_check",
-      sql`${table.sourceType} in ('stock_in', 'purchase_receipt', 'transfer_in', 'adjustment_increase', 'legacy_balance')`,
+      sql`${table.sourceType} in ('stock_in', 'purchase_receipt', 'transfer_in', 'adjustment_increase', 'legacy_balance', 'production_yield')`,
     ),
     check("raw_material_batches_remaining_check", sql`${table.quantityRemaining} >= 0 and ${table.quantityRemaining} <= ${table.quantityReceived}`),
   ],

@@ -16,12 +16,17 @@ const recipeItemInput = z.object({
   unitId: z.string().uuid(),
 });
 
-const recipeInput = z.object({
-  productId: z.string().uuid(),
+const recipeInputBase = z.object({
+  productId: z.string().uuid().optional(),
+  outputRawMaterialId: z.string().uuid().optional(),
   name: z.string().min(1),
   yieldQuantity: z.coerce.number().positive(),
   yieldUnitId: z.string().uuid(),
   items: z.array(recipeItemInput).min(1),
+});
+
+const recipeInput = recipeInputBase.refine((v) => (v.productId != null) !== (v.outputRawMaterialId != null), {
+  message: "Exactly one of productId or outputRawMaterialId must be set",
 });
 
 recipesRoute.get("/", async (c) => {
@@ -60,6 +65,7 @@ recipesRoute.post("/", requireRole("owner", "admin"), zValidator("json", recipeI
       .insert(recipes)
       .values({
         productId: input.productId,
+        outputRawMaterialId: input.outputRawMaterialId,
         name: input.name,
         yieldQuantity: String(input.yieldQuantity),
         yieldUnitId: input.yieldUnitId,
@@ -85,7 +91,7 @@ recipesRoute.post("/", requireRole("owner", "admin"), zValidator("json", recipeI
 recipesRoute.patch(
   "/:id",
   requireRole("owner", "admin"),
-  zValidator("json", recipeInput.partial()),
+  zValidator("json", recipeInputBase.partial()),
   async (c) => {
     const id = c.req.param("id");
     const input = c.req.valid("json");
@@ -98,7 +104,8 @@ recipesRoute.patch(
       const [recipe] = await tx
         .update(recipes)
         .set({
-          productId: input.productId,
+          productId: input.productId !== undefined ? input.productId : input.outputRawMaterialId !== undefined ? null : undefined,
+          outputRawMaterialId: input.outputRawMaterialId !== undefined ? input.outputRawMaterialId : input.productId !== undefined ? null : undefined,
           name: input.name,
           yieldQuantity: input.yieldQuantity != null ? String(input.yieldQuantity) : undefined,
           yieldUnitId: input.yieldUnitId,
